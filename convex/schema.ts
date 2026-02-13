@@ -16,10 +16,17 @@ export default defineSchema({
     practiceId: v.optional(v.id("practices")), // null for solo practitioners
     role: v.string(), // owner, admin, clinician
     isActive: v.boolean(),
+    hasExistingEhr: v.boolean(), // true = EHR integration, false = standalone
+    practiceSize: v.string(), // solo, small, medium, large
+    // Session management for single login enforcement
+    activeSessionId: v.optional(v.string()), // Current active session token
+    activeSessionStartedAt: v.optional(v.number()), // When current session started
+    lastActiveAt: v.optional(v.number()), // Last activity timestamp
   })
     .index("by_userId", ["userId"])
     .index("by_email", ["email"])
-    .index("by_practiceId", ["practiceId"]),
+    .index("by_practiceId", ["practiceId"])
+    .index("by_activeSessionId", ["activeSessionId"]),
 
   // Practices - for multi-clinician accounts
   practices: defineTable({

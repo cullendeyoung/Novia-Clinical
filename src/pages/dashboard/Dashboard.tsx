@@ -7,47 +7,63 @@ import {
   CheckCircle,
   AlertCircle,
   Mic,
+  Users,
+  Share2,
+  Database,
 } from "lucide-react";
 import type { Doc } from "../../../convex/_generated/dataModel";
 
-type DashboardContext = {
-  clinician: Doc<"clinicians"> | null | undefined;
+type SubscriptionInfo = {
+  plan: string;
+  status: string;
+  hasEhrIntegration: boolean;
+  notesRemaining: number | "unlimited";
+  trialDaysRemaining?: number;
 };
 
-// Placeholder data - will be replaced with real queries
-const stats = [
-  {
-    name: "Today's Sessions",
-    value: "0",
-    icon: FileText,
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
-  },
-  {
-    name: "Pending Reviews",
-    value: "0",
-    icon: AlertCircle,
-    color: "text-amber-600",
-    bgColor: "bg-amber-100",
-  },
-  {
-    name: "Monthly Notes",
-    value: "0",
-    icon: CheckCircle,
-    color: "text-green-600",
-    bgColor: "bg-green-100",
-  },
-  {
-    name: "Avg. Time Saved",
-    value: "0 min",
-    icon: Clock,
-    color: "text-purple-600",
-    bgColor: "bg-purple-100",
-  },
-];
+type DashboardContext = {
+  clinician: Doc<"clinicians"> | null | undefined;
+  subscription?: SubscriptionInfo;
+};
 
 export default function Dashboard() {
-  const { clinician } = useOutletContext<DashboardContext>();
+  const { clinician, subscription } = useOutletContext<DashboardContext>();
+  const hasEhr = clinician?.hasExistingEhr ?? subscription?.hasEhrIntegration;
+
+  // Stats vary based on EHR vs Standalone mode
+  const stats = [
+    {
+      name: "Today's Sessions",
+      value: "0",
+      icon: FileText,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
+    },
+    {
+      name: "Pending Reviews",
+      value: "0",
+      icon: AlertCircle,
+      color: "text-amber-600",
+      bgColor: "bg-amber-100",
+    },
+    {
+      name: "Monthly Notes",
+      value:
+        subscription?.notesRemaining === "unlimited"
+          ? "Unlimited"
+          : `${subscription?.notesRemaining ?? 0} left`,
+      icon: CheckCircle,
+      color: "text-green-600",
+      bgColor: "bg-green-100",
+    },
+    {
+      name: "Avg. Time Saved",
+      value: "0 min",
+      icon: Clock,
+      color: "text-purple-600",
+      bgColor: "bg-purple-100",
+    },
+  ];
 
   return (
     <div className="p-6">
@@ -55,7 +71,10 @@ export default function Dashboard() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="font-heading text-2xl font-semibold text-slate-900">
-            Welcome back{clinician?.fullName ? `, ${clinician.fullName.split(" ")[0]}` : ""}
+            Welcome back
+            {clinician?.fullName
+              ? `, ${clinician.fullName.split(" ")[0]}`
+              : ""}
           </h1>
           <p className="mt-1 text-muted-foreground">
             Here's an overview of your clinical documentation
@@ -67,6 +86,57 @@ export default function Dashboard() {
             New Session
           </Link>
         </Button>
+      </div>
+
+      {/* Trial Banner */}
+      {subscription?.status === "trialing" &&
+        subscription.trialDaysRemaining !== undefined && (
+          <div className="mb-6 rounded-lg bg-blue-50 border border-blue-200 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-900">
+                    {subscription.trialDaysRemaining} days left in your free
+                    trial
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    Subscribe now to continue using Novia after your trial ends
+                  </p>
+                </div>
+              </div>
+              <Button size="sm" asChild>
+                <Link to="/pricing">Subscribe Now</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
+      {/* Mode Indicator */}
+      <div className="mb-6 rounded-lg bg-slate-100 p-4">
+        <div className="flex items-center gap-3">
+          {hasEhr ? (
+            <>
+              <Share2 className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium text-slate-900">EHR Integration Mode</p>
+                <p className="text-sm text-muted-foreground">
+                  Notes will be exported to your connected EHR system
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <Database className="h-5 w-5 text-primary" />
+              <div>
+                <p className="font-medium text-slate-900">Standalone Mode</p>
+                <p className="text-sm text-muted-foreground">
+                  Patient records and notes are stored securely in Novia
+                </p>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -112,20 +182,38 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          <Link
-            to="/dashboard/patients"
-            className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
-              <FileText className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="font-medium text-slate-900">View Patients</p>
-              <p className="text-sm text-muted-foreground">
-                Manage your patient records
-              </p>
-            </div>
-          </Link>
+          {/* Show different action based on mode */}
+          {hasEhr ? (
+            <Link
+              to="/dashboard/ehr-connect"
+              className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+                <Share2 className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-medium text-slate-900">EHR Connection</p>
+                <p className="text-sm text-muted-foreground">
+                  Manage your EHR integration
+                </p>
+              </div>
+            </Link>
+          ) : (
+            <Link
+              to="/dashboard/patients"
+              className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+                <Users className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-medium text-slate-900">Manage Patients</p>
+                <p className="text-sm text-muted-foreground">
+                  Add and manage patient records
+                </p>
+              </div>
+            </Link>
+          )}
 
           <Link
             to="/dashboard/templates"
