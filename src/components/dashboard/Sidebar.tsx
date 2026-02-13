@@ -33,7 +33,7 @@ export default function Sidebar({ clinicianName, practiceName }: SidebarProps) {
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
             <img
-              src="/images/a44fb373-4edd-48ee-b1c0-fc4bfeffdbf5-1.png"
+              src="/novia-logo.png"
               alt="Novia"
               className="h-6 w-auto"
             />

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Unbounded:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -38,9 +38,9 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  --primary: oklch(75% 0.13 196);
-  --font-sans: "DM Sans", sans-serif;
-  --font-heading: "Unbounded", sans-serif;
+  --primary: #00B4D8;
+  --font-sans: "Inter", "DM Sans", sans-serif;
+  --font-heading: "Inter", "DM Sans", sans-serif;
 }
 
 @theme inline {
