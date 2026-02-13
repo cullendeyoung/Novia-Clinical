@@ -76,6 +76,12 @@ export default function Header() {
           ) : (
             <>
               <Link
+                to="/pricing"
+                className="hidden sm:inline-flex h-9 items-center px-4 text-sm font-medium text-foreground transition hover:text-primary"
+              >
+                Pricing
+              </Link>
+              <Link
                 to="/login"
                 className="inline-flex h-9 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground shadow-xs transition hover:bg-gray-200"
               >
@@ -85,7 +91,7 @@ export default function Header() {
                 to="/register"
                 className="inline-flex h-9 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90"
               >
-                Sign up
+                Start Free Trial
               </Link>
             </>
           )}
