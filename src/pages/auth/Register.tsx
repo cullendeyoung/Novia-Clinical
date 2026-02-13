@@ -265,7 +265,7 @@ export default function Register() {
                     />
                     <div>
                       <div className="font-medium">
-                        Use ClinNote as my documentation system
+                        Use Novia as my documentation system
                       </div>
                       <div className="text-sm text-muted-foreground">
                         Full patient management and note storage included
@@ -342,7 +342,7 @@ export default function Register() {
         <div className="hidden lg:flex flex-col justify-center space-y-6">
           <div className="space-y-4">
             <h2 className="font-heading text-2xl font-semibold text-slate-900">
-              Why clinicians love ClinNote
+              Why clinicians love Novia
             </h2>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
@@ -386,7 +386,7 @@ export default function Register() {
 
           <div className="rounded-lg bg-slate-50 p-6">
             <blockquote className="text-slate-700">
-              "ClinNote has cut my documentation time in half. I spend more time
+              "Novia has cut my documentation time in half. I spend more time
               with patients and less time typing notes."
             </blockquote>
             <div className="mt-3 flex items-center gap-3">

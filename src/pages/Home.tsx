@@ -51,14 +51,14 @@ const howItWorks = [
   {
     step: "4",
     title: "Export",
-    description: "Send to your EHR or store securely in ClinNote.",
+    description: "Send to your EHR or store securely in Novia.",
   },
 ];
 
 const testimonials = [
   {
     quote:
-      "ClinNote has cut my documentation time in half. I finally have time to focus on what matters - my patients.",
+      "Novia has cut my documentation time in half. I finally have time to focus on what matters - my patients.",
     name: "Dr. Sarah Chen",
     role: "Family Physician",
     initials: "SC",
@@ -72,7 +72,7 @@ const testimonials = [
   },
   {
     quote:
-      "As a psychologist, accurate documentation is critical. ClinNote captures nuances I used to miss.",
+      "As a psychologist, accurate documentation is critical. Novia captures nuances I used to miss.",
     name: "Dr. Emily Brooks",
     role: "Psychologist",
     initials: "EB",
@@ -214,7 +214,7 @@ export default function Home() {
                 Spend more time with patients, less time typing
               </h2>
               <p className="mt-4 text-lg text-muted-foreground">
-                ClinNote handles the documentation so you can focus on care.
+                Novia handles the documentation so you can focus on care.
                 Works for physicians, PTs, chiropractors, psychologists, and
                 more.
               </p>
@@ -253,7 +253,7 @@ export default function Home() {
                   <div className="h-2 w-full rounded-full bg-slate-400" />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-600">With ClinNote</span>
+                  <span className="text-sm text-slate-600">With Novia</span>
                   <span className="font-medium text-primary">3-5 min</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-slate-200">
@@ -273,7 +273,7 @@ export default function Home() {
               Trusted by clinicians everywhere
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              See what healthcare providers are saying about ClinNote
+              See what healthcare providers are saying about Novia
             </p>
           </div>
           <div className="mt-12 grid gap-8 md:grid-cols-3">
@@ -353,7 +353,7 @@ export default function Home() {
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
             Join thousands of clinicians who save hours every week with
-            ClinNote. Start your free trial today.
+            Novia. Start your free trial today.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">

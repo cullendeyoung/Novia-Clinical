@@ -5,7 +5,10 @@ import Pricing from "./pages/Pricing";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import DashboardLayout from "./components/dashboard/DashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
+import NewSession from "./pages/dashboard/NewSession";
+import Patients from "./pages/dashboard/Patients";
 import ErrorPage from "./pages/Error";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import GuestRoute from "./components/auth/GuestRoute";
@@ -45,7 +48,21 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "/dashboard",
-            element: <Dashboard />,
+            element: <DashboardLayout />,
+            children: [
+              {
+                index: true,
+                element: <Dashboard />,
+              },
+              {
+                path: "new-session",
+                element: <NewSession />,
+              },
+              {
+                path: "patients",
+                element: <Patients />,
+              },
+            ],
           },
         ],
       },

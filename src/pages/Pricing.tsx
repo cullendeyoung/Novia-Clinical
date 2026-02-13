@@ -248,7 +248,7 @@ export default function Pricing() {
               <p className="mt-2 text-sm text-muted-foreground">
                 With EHR Integration, notes are exported to your existing
                 system. Standalone includes full patient management and secure
-                note storage within ClinNote.
+                note storage within Novia.
               </p>
             </div>
             <div>
