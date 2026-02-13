@@ -8,6 +8,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import NoviaLogo from "@/components/ui/NoviaLogo";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -31,21 +32,15 @@ export default function Sidebar({ clinicianName, practiceName }: SidebarProps) {
       {/* Practice/Clinician Header */}
       <div className="border-b border-slate-200 p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <img
-              src="/novia-logo.png"
-              alt="Novia"
-              className="h-6 w-auto"
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-medium text-slate-900">
-              {practiceName || clinicianName || "My Practice"}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {practiceName ? clinicianName : "Solo Practice"}
-            </p>
-          </div>
+          <NoviaLogo className="h-8 w-auto" />
+        </div>
+        <div className="mt-3">
+          <p className="truncate text-sm font-medium text-slate-900">
+            {practiceName || clinicianName || "My Practice"}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {practiceName ? clinicianName : "Solo Practice"}
+          </p>
         </div>
       </div>
 

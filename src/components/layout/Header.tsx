@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useConvexAuth } from "convex/react";
 import toast from "react-hot-toast";
 import { authClient } from "@/lib/auth-client";
+import NoviaLogo from "@/components/ui/NoviaLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +31,7 @@ export default function Header() {
     <header className="sticky top-0 z-40 w-full border-b border-border bg-white shadow-sm">
       <div className="container mx-auto flex h-16 max-w-5xl items-center justify-between px-4 md:px-4">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/novia-logo.png" alt="Novia Clinical" className="h-10 w-auto" />
+          <NoviaLogo className="h-10 w-auto" />
         </Link>
 
         <nav className="flex items-center gap-2">
