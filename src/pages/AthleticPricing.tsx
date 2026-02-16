@@ -16,6 +16,7 @@ type PricingTier = {
   name: string;
   description: string;
   price: number | "Custom";
+  billingPeriod: "month" | "year";
   teams: string;
   atsPerTeam: string;
   features: string[];
@@ -28,7 +29,8 @@ const pricingTiers: PricingTier[] = [
   {
     name: "Single Team Trial",
     description: "Perfect for small athletic programs",
-    price: 3588,
+    price: 299,
+    billingPeriod: "month",
     teams: "1 team",
     atsPerTeam: "1 athletic trainer",
     features: [
@@ -46,9 +48,10 @@ const pricingTiers: PricingTier[] = [
   {
     name: "Department",
     description: "For growing athletic departments",
-    price: 8388,
+    price: 8399,
+    billingPeriod: "year",
     teams: "Up to 5 teams",
-    atsPerTeam: "3 athletic trainers per team",
+    atsPerTeam: "2 athletic trainers per team",
     features: [
       "Everything in Single Team Trial",
       "Multi-team dashboard",
@@ -65,9 +68,10 @@ const pricingTiers: PricingTier[] = [
   {
     name: "Program",
     description: "For full athletic departments",
-    price: 17988,
+    price: 17999,
+    billingPeriod: "year",
     teams: "Up to 15 teams",
-    atsPerTeam: "5 athletic trainers per team",
+    atsPerTeam: "3 athletic trainers per team",
     features: [
       "Everything in Department",
       "Physician sign-off workflows",
@@ -84,6 +88,7 @@ const pricingTiers: PricingTier[] = [
     name: "Enterprise",
     description: "For conferences & large organizations",
     price: "Custom",
+    billingPeriod: "year",
     teams: "Unlimited teams",
     atsPerTeam: "Unlimited athletic trainers",
     features: [
@@ -192,9 +197,9 @@ function PricingCard({ tier }: { tier: PricingTier }) {
         ) : (
           <div className="flex items-baseline">
             <span className="font-heading text-4xl font-bold text-slate-900">
-              ${tier.price}
+              ${tier.price.toLocaleString()}
             </span>
-            <span className="ml-1 text-muted-foreground">/year</span>
+            <span className="ml-1 text-muted-foreground">/{tier.billingPeriod}</span>
           </div>
         )}
         <div className="mt-2 space-y-1 text-sm text-muted-foreground">
