@@ -293,7 +293,7 @@ export default function RegisterOrganization() {
 
               <div className="border-t border-slate-200 my-4 pt-4">
                 <p className="text-sm font-medium text-slate-700 mb-3">
-                  Select Your Plan
+                  Confirm Your Plan
                 </p>
               </div>
 
