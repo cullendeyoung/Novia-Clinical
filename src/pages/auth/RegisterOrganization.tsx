@@ -133,7 +133,12 @@ export default function RegisterOrganization() {
       }
 
       toast.success("Organization created successfully!");
-      navigate("/org/dashboard", { replace: true });
+      // Redirect to payment page with plan and org name
+      const params = new URLSearchParams({
+        plan: formData.plan,
+        org: formData.organizationName,
+      });
+      navigate(`/register/organization/payment?${params.toString()}`, { replace: true });
     } catch (error) {
       console.error(error);
       toast.error(

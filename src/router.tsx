@@ -6,6 +6,7 @@ import AthleticPricing from "./pages/AthleticPricing";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import RegisterOrganization from "./pages/auth/RegisterOrganization";
+import OrganizationPayment from "./pages/auth/OrganizationPayment";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
@@ -46,6 +47,10 @@ export const router = createBrowserRouter([
           {
             path: "/register/organization",
             element: <RegisterOrganization />,
+          },
+          {
+            path: "/register/organization/payment",
+            element: <OrganizationPayment />,
           },
           {
             path: "/forgot-password",
