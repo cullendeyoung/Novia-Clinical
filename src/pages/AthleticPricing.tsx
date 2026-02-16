@@ -42,7 +42,7 @@ const pricingTiers: PricingTier[] = [
       "Email support",
       "HIPAA compliant",
     ],
-    cta: "Start Free Trial",
+    cta: "Get Started",
     ctaLink: "/register/organization",
   },
   {
@@ -61,7 +61,7 @@ const pricingTiers: PricingTier[] = [
       "Priority support",
       "Data export (JSON/CSV)",
     ],
-    cta: "Start Free Trial",
+    cta: "Get Started",
     ctaLink: "/register/organization",
   },
   {
@@ -81,7 +81,7 @@ const pricingTiers: PricingTier[] = [
       "Custom integrations",
     ],
     highlighted: true,
-    cta: "Start Free Trial",
+    cta: "Get Started",
     ctaLink: "/register/organization",
   },
   {
@@ -249,15 +249,12 @@ export default function AthleticPricing() {
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button asChild size="lg">
-                <Link to="/register/organization">Start Free Trial</Link>
+                <Link to="/register/organization">Get Started</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link to="/contact">Contact Sales</Link>
               </Button>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              14-day free trial. No credit card required.
-            </p>
           </div>
         </div>
       </section>
@@ -494,11 +491,11 @@ export default function AthleticPricing() {
             </div>
             <div>
               <h3 className="font-medium text-slate-900">
-                What's included in the free trial?
+                How do I get started?
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Full access to all features in your selected plan for 14 days.
-                No credit card required. Cancel anytime.
+                Register your organization, select your plan, and start adding
+                teams and athletic trainers right away.
               </p>
             </div>
           </div>
@@ -517,7 +514,7 @@ export default function AthleticPricing() {
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg">
-              <Link to="/register/organization">Start Free Trial</Link>
+              <Link to="/register/organization">Get Started</Link>
             </Button>
             <Button asChild variant="outline" size="lg">
               <Link to="/contact">Contact Sales</Link>
