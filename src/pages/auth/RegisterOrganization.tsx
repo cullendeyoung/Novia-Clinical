@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select } from "@/components/ui/select";
 import {
   CheckCircle,
   Building2,
@@ -17,20 +16,35 @@ import {
   Activity,
 } from "lucide-react";
 
-const TEAM_COUNTS = [
-  { value: "1", label: "1 team" },
-  { value: "3", label: "Up to 3 teams" },
-  { value: "5", label: "Up to 5 teams" },
-  { value: "10", label: "Up to 10 teams" },
-  { value: "15", label: "Up to 15 teams" },
-  { value: "25", label: "Up to 25 teams" },
-];
-
-const AT_PER_TEAM = [
-  { value: "2", label: "2 athletic trainers per team" },
-  { value: "3", label: "3 athletic trainers per team" },
-  { value: "5", label: "5 athletic trainers per team" },
-  { value: "10", label: "10 athletic trainers per team" },
+const PRICING_PLANS = [
+  {
+    value: "single_team_trial",
+    label: "Single Team Trial - $299/month",
+    description: "1 team, 1 athletic trainer",
+    teams: 1,
+    atsPerTeam: 1,
+  },
+  {
+    value: "department",
+    label: "Department - $8,399/year",
+    description: "Up to 5 teams, 2 athletic trainers per team",
+    teams: 5,
+    atsPerTeam: 2,
+  },
+  {
+    value: "program",
+    label: "Program - $17,999/year",
+    description: "Up to 15 teams, 3 athletic trainers per team",
+    teams: 15,
+    atsPerTeam: 3,
+  },
+  {
+    value: "enterprise",
+    label: "Enterprise - Custom pricing",
+    description: "Unlimited teams and athletic trainers",
+    teams: 999,
+    atsPerTeam: 999,
+  },
 ];
 
 const PASSWORD_REGEX =
@@ -47,8 +61,7 @@ export default function RegisterOrganization() {
     email: "",
     password: "",
     confirmPassword: "",
-    teamCount: "",
-    atsPerTeam: "",
+    plan: "",
   });
 
   const createOrganization = useMutation(api.organizations.create);
@@ -66,13 +79,14 @@ export default function RegisterOrganization() {
       return;
     }
 
-    if (!formData.teamCount) {
-      toast.error("Please select how many teams you need");
+    if (!formData.plan) {
+      toast.error("Please select a plan");
       return;
     }
 
-    if (!formData.atsPerTeam) {
-      toast.error("Please select athletic trainers per team");
+    const selectedPlan = PRICING_PLANS.find((p) => p.value === formData.plan);
+    if (!selectedPlan) {
+      toast.error("Invalid plan selected");
       return;
     }
 
@@ -112,8 +126,8 @@ export default function RegisterOrganization() {
           ownerAuthUserId: data.user.id,
           ownerEmail: formData.email,
           ownerFullName: formData.fullName,
-          teamCount: parseInt(formData.teamCount, 10),
-          maxAthleticTrainersPerTeam: parseInt(formData.atsPerTeam, 10),
+          teamCount: selectedPlan.teams,
+          maxAthleticTrainersPerTeam: selectedPlan.atsPerTeam,
         });
       }
 
@@ -143,6 +157,22 @@ export default function RegisterOrganization() {
             <p className="text-muted-foreground">
               Set up your athletic department or organization
             </p>
+            {/* Step Indicators */}
+            <div className="mt-6 flex items-center justify-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm font-medium text-white">
+                  1
+                </div>
+                <span className="text-sm font-medium text-slate-900">Create Organization</span>
+              </div>
+              <div className="h-px w-8 bg-slate-300" />
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-sm font-medium text-slate-500">
+                  2
+                </div>
+                <span className="text-sm text-slate-500">Payment</span>
+              </div>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -263,40 +293,44 @@ export default function RegisterOrganization() {
 
               <div className="border-t border-slate-200 my-4 pt-4">
                 <p className="text-sm font-medium text-slate-700 mb-3">
-                  Plan Configuration
+                  Select Your Plan
                 </p>
               </div>
 
-              {/* Team Count */}
-              <div className="space-y-2">
-                <Label htmlFor="teamCount">Number of Teams</Label>
-                <Select
-                  id="teamCount"
-                  name="teamCount"
-                  required
-                  options={TEAM_COUNTS}
-                  placeholder="Select team count"
-                  value={formData.teamCount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, teamCount: e.target.value })
-                  }
-                />
-              </div>
-
-              {/* ATs per Team */}
-              <div className="space-y-2">
-                <Label htmlFor="atsPerTeam">Athletic Trainers per Team</Label>
-                <Select
-                  id="atsPerTeam"
-                  name="atsPerTeam"
-                  required
-                  options={AT_PER_TEAM}
-                  placeholder="Select AT count"
-                  value={formData.atsPerTeam}
-                  onChange={(e) =>
-                    setFormData({ ...formData, atsPerTeam: e.target.value })
-                  }
-                />
+              {/* Plan Selection */}
+              <div className="space-y-3">
+                {PRICING_PLANS.map((plan) => (
+                  <label
+                    key={plan.value}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
+                      formData.plan === plan.value
+                        ? "border-primary bg-primary/5"
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="plan"
+                      value={plan.value}
+                      checked={formData.plan === plan.value}
+                      onChange={(e) =>
+                        setFormData({ ...formData, plan: e.target.value })
+                      }
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-slate-900">{plan.label}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {plan.description}
+                      </div>
+                      {plan.value === "enterprise" && (
+                        <div className="mt-1 text-xs text-primary">
+                          Payment will be arranged after organization setup
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
 
@@ -341,9 +375,12 @@ export default function RegisterOrganization() {
                   Creating organization...
                 </span>
               ) : (
-                "Create Organization"
+                "Continue to Payment"
               )}
             </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              You'll complete payment setup in the next step
+            </p>
           </form>
 
           <div className="mt-6 text-center">
