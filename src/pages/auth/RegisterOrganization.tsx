@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select } from "@/components/ui/select";
 import {
   CheckCircle,
   Building2,
@@ -298,39 +299,32 @@ export default function RegisterOrganization() {
               </div>
 
               {/* Plan Selection */}
-              <div className="space-y-3">
-                {PRICING_PLANS.map((plan) => (
-                  <label
-                    key={plan.value}
-                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
-                      formData.plan === plan.value
-                        ? "border-primary bg-primary/5"
-                        : "border-slate-200 hover:border-slate-300"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="plan"
-                      value={plan.value}
-                      checked={formData.plan === plan.value}
-                      onChange={(e) =>
-                        setFormData({ ...formData, plan: e.target.value })
-                      }
-                      className="mt-1"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-slate-900">{plan.label}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {plan.description}
-                      </div>
-                      {plan.value === "enterprise" && (
-                        <div className="mt-1 text-xs text-primary">
-                          Payment will be arranged after organization setup
-                        </div>
-                      )}
-                    </div>
-                  </label>
-                ))}
+              <div className="space-y-2">
+                <Label htmlFor="plan">Select Plan</Label>
+                <Select
+                  id="plan"
+                  name="plan"
+                  required
+                  options={PRICING_PLANS.map((plan) => ({
+                    value: plan.value,
+                    label: plan.label,
+                  }))}
+                  placeholder="Select a plan"
+                  value={formData.plan}
+                  onChange={(e) =>
+                    setFormData({ ...formData, plan: e.target.value })
+                  }
+                />
+                {formData.plan && (
+                  <p className="text-sm text-muted-foreground">
+                    {PRICING_PLANS.find((p) => p.value === formData.plan)?.description}
+                  </p>
+                )}
+                {formData.plan === "enterprise" && (
+                  <p className="text-xs text-primary">
+                    Payment will be arranged after organization setup
+                  </p>
+                )}
               </div>
             </div>
 
