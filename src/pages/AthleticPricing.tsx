@@ -194,7 +194,7 @@ function PricingCard({ tier }: { tier: PricingTier }) {
             <span className="font-heading text-4xl font-bold text-slate-900">
               ${tier.price}
             </span>
-            <span className="ml-1 text-muted-foreground">/month</span>
+            <span className="ml-1 text-muted-foreground">/year</span>
           </div>
         )}
         <div className="mt-2 space-y-1 text-sm text-muted-foreground">
