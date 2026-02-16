@@ -1,34 +1,392 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-// HIPAA-Compliant Clinical Documentation Platform Schema
+// =============================================================================
+// HIPAA-Compliant Multi-Tenant Athletic Training Platform Schema
 // All PHI (Protected Health Information) is stored with audit trails
+// Every record is scoped by orgId for tenant isolation
+// =============================================================================
+
+// Role types for type safety
+const roleValidator = v.union(
+  v.literal("org_admin"),
+  v.literal("athletic_trainer"),
+  v.literal("physician"),
+  v.literal("read_only"),
+  v.literal("athlete")
+);
+
+// Organization status types
+const orgStatusValidator = v.union(
+  v.literal("trial"),
+  v.literal("active"),
+  v.literal("past_due"),
+  v.literal("canceled")
+);
+
+// Injury status types
+const injuryStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("resolved")
+);
+
+// Return-to-play status types
+const rtpStatusValidator = v.union(
+  v.literal("full"),
+  v.literal("limited"),
+  v.literal("out")
+);
+
+// Body side types
+const sideValidator = v.union(
+  v.literal("L"),
+  v.literal("R"),
+  v.literal("Bilateral"),
+  v.literal("NA")
+);
+
+// Encounter types
+const encounterTypeValidator = v.union(
+  v.literal("daily_care"),
+  v.literal("soap_followup"),
+  v.literal("initial_eval"),
+  v.literal("rtp_clearance"),
+  v.literal("other")
+);
+
+// Invitation status types
+const invitationStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("accepted"),
+  v.literal("expired")
+);
+
+// Sex types
+const sexValidator = v.union(
+  v.literal("M"),
+  v.literal("F"),
+  v.literal("Other")
+);
 
 export default defineSchema({
-  // Clinician profiles - extends Better Auth user data
+  // =============================================================================
+  // ATHLETIC TRAINING PLATFORM TABLES (New Multi-Tenant Structure)
+  // =============================================================================
+
+  // Organizations - Universities, professional teams, athletic departments
+  // This is the root tenant - all data belongs to exactly one organization
+  organizations: defineTable({
+    name: v.string(), // "University of Vermont", "Detroit Red Wings"
+    domain: v.optional(v.string()), // "uvm.edu" for email validation
+    settingsJson: v.optional(v.string()), // JSON config options
+    status: orgStatusValidator,
+    // Note: ownerId can't reference users table due to circular dependency
+    // Instead, we store the authUserId of the owner and resolve via query
+    ownerAuthUserId: v.string(), // Better Auth user ID of org admin
+    teamCount: v.number(), // How many teams they purchased/can create
+    maxAthleticTrainersPerTeam: v.number(), // AT limit per team
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_ownerAuthUserId", ["ownerAuthUserId"])
+    .index("by_domain", ["domain"])
+    .index("by_status", ["status"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Teams - Individual sports teams within an organization
+  teams: defineTable({
+    orgId: v.id("organizations"),
+    name: v.string(), // "Men's Basketball", "Women's Soccer"
+    sport: v.string(), // "basketball", "soccer", "football", "hockey"
+    season: v.optional(v.string()), // "fall", "spring", "year-round"
+    inviteCode: v.string(), // Unique code for athlete self-registration
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_inviteCode", ["inviteCode"])
+    .index("by_orgId_and_isActive", ["orgId", "isActive"]),
+
+  // Users - All user types: org admins, athletic trainers, physicians, athletes
+  users: defineTable({
+    orgId: v.id("organizations"),
+    authUserId: v.string(), // Links to Better Auth user
+    email: v.string(),
+    fullName: v.string(),
+    role: roleValidator,
+    // For ATs/physicians: which teams they're assigned to
+    // For athletes: their team (single team)
+    teamIds: v.array(v.id("teams")),
+    isActive: v.boolean(),
+    lastLoginAt: v.optional(v.number()),
+    // Session management for single login enforcement
+    activeSessionId: v.optional(v.string()),
+    activeSessionStartedAt: v.optional(v.number()),
+    lastActiveAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_authUserId", ["authUserId"])
+    .index("by_email", ["email"])
+    .index("by_orgId_and_email", ["orgId", "email"])
+    .index("by_orgId_and_role", ["orgId", "role"])
+    .index("by_activeSessionId", ["activeSessionId"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Athletes - Player/athlete records (may or may not have a user account)
+  athletes: defineTable({
+    orgId: v.id("organizations"),
+    userId: v.optional(v.id("users")), // If they've created an account
+    teamId: v.id("teams"),
+    externalAthleteRef: v.optional(v.string()), // For roster sync from external systems
+    firstName: v.string(),
+    lastName: v.string(),
+    dateOfBirth: v.optional(v.string()), // ISO date string
+    sex: v.optional(sexValidator),
+    classYear: v.optional(v.string()), // "Freshman", "Sophomore", "Junior", "Senior", "Graduate"
+    jerseyNumber: v.optional(v.string()),
+    position: v.optional(v.string()), // "Point Guard", "Goalkeeper", etc.
+    heightInches: v.optional(v.number()),
+    weightLbs: v.optional(v.number()),
+    notes: v.optional(v.string()), // General notes
+    emergencyContactName: v.optional(v.string()),
+    emergencyContactPhone: v.optional(v.string()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_teamId", ["teamId"])
+    .index("by_userId", ["userId"])
+    .index("by_orgId_and_teamId", ["orgId", "teamId"])
+    .index("by_lastName_firstName", ["lastName", "firstName"])
+    .index("by_externalAthleteRef", ["externalAthleteRef"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Injuries - Injury tracking per athlete
+  injuries: defineTable({
+    orgId: v.id("organizations"),
+    athleteId: v.id("athletes"),
+    injuryDate: v.string(), // ISO date string
+    bodyRegion: v.string(), // "ankle", "knee", "shoulder", "head", "back", "hip", etc.
+    side: sideValidator,
+    mechanism: v.optional(v.string()), // How injury occurred
+    diagnosis: v.optional(v.string()), // Clinical diagnosis
+    status: injuryStatusValidator,
+    rtpStatus: rtpStatusValidator, // Return-to-play status
+    resolvedDate: v.optional(v.string()), // When resolved
+    createdByUserId: v.id("users"), // AT who logged it
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_athleteId", ["athleteId"])
+    .index("by_status", ["status"])
+    .index("by_athleteId_and_status", ["athleteId", "status"])
+    .index("by_orgId_and_status", ["orgId", "status"])
+    .index("by_createdByUserId", ["createdByUserId"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Encounters - Clinical encounters/notes (daily care, SOAP, initial eval, etc.)
+  encounters: defineTable({
+    orgId: v.id("organizations"),
+    athleteId: v.id("athletes"),
+    injuryId: v.optional(v.id("injuries")), // Can be associated with an injury
+    encounterType: encounterTypeValidator,
+    encounterDatetime: v.number(), // Timestamp
+    providerUserId: v.id("users"), // AT who created it
+    // SOAP fields
+    subjectiveText: v.optional(v.string()),
+    objectiveText: v.optional(v.string()),
+    assessmentText: v.optional(v.string()),
+    planText: v.optional(v.string()),
+    // Full rendered note
+    fullNoteText: v.optional(v.string()),
+    // Transcription support
+    transcriptText: v.optional(v.string()),
+    aiGenerated: v.boolean(),
+    // Sign-off support (for physician oversight)
+    signedOffByUserId: v.optional(v.id("users")),
+    signedOffAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_athleteId", ["athleteId"])
+    .index("by_injuryId", ["injuryId"])
+    .index("by_providerUserId", ["providerUserId"])
+    .index("by_encounterType", ["encounterType"])
+    .index("by_orgId_and_athleteId", ["orgId", "athleteId"])
+    .index("by_orgId_and_encounterDatetime", ["orgId", "encounterDatetime"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Treatments - Treatment details for encounters
+  treatments: defineTable({
+    orgId: v.id("organizations"),
+    encounterId: v.id("encounters"),
+    modalityCodes: v.string(), // JSON array of treatment codes
+    exercisesText: v.optional(v.string()),
+    durationMinutes: v.optional(v.number()),
+    responseText: v.optional(v.string()), // Patient response to treatment
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_encounterId", ["encounterId"]),
+
+  // Participation Status - Daily participation tracking
+  participationStatus: defineTable({
+    orgId: v.id("organizations"),
+    athleteId: v.id("athletes"),
+    date: v.string(), // ISO date string (YYYY-MM-DD)
+    status: rtpStatusValidator, // full, limited, out
+    reason: v.optional(v.string()), // Reason for limited/out
+    setByUserId: v.id("users"), // AT who set the status
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_athleteId", ["athleteId"])
+    .index("by_date", ["date"])
+    .index("by_athleteId_and_date", ["athleteId", "date"])
+    .index("by_orgId_and_date", ["orgId", "date"]),
+
+  // Attachments - File attachments (images, documents, etc.)
+  attachments: defineTable({
+    orgId: v.id("organizations"),
+    athleteId: v.optional(v.id("athletes")),
+    encounterId: v.optional(v.id("encounters")),
+    injuryId: v.optional(v.id("injuries")),
+    storageId: v.id("_storage"), // Convex file storage
+    fileName: v.string(),
+    contentType: v.string(),
+    fileSize: v.number(), // bytes
+    checksumHash: v.optional(v.string()), // For integrity verification
+    uploadedByUserId: v.id("users"),
+    uploadedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_athleteId", ["athleteId"])
+    .index("by_encounterId", ["encounterId"])
+    .index("by_injuryId", ["injuryId"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Invitations - For inviting ATs/physicians to join
+  invitations: defineTable({
+    orgId: v.id("organizations"),
+    teamId: v.id("teams"),
+    email: v.string(),
+    role: v.union(v.literal("athletic_trainer"), v.literal("physician")),
+    invitedByUserId: v.id("users"),
+    token: v.string(), // Unique invitation token
+    status: invitationStatusValidator,
+    expiresAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_token", ["token"])
+    .index("by_email", ["email"])
+    .index("by_status", ["status"])
+    .index("by_orgId_and_status", ["orgId", "status"]),
+
+  // Organization Subscriptions - Billing for athletic departments
+  orgSubscriptions: defineTable({
+    orgId: v.id("organizations"),
+    stripeCustomerId: v.string(),
+    stripeSubscriptionId: v.string(),
+    plan: v.string(), // "athletic_starter", "athletic_team", "athletic_department", "enterprise"
+    teamCount: v.number(), // Number of teams included
+    athleticTrainersPerTeam: v.number(), // ATs per team included
+    status: orgStatusValidator,
+    trialEndsAt: v.optional(v.number()),
+    billingCycleStart: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_stripeCustomerId", ["stripeCustomerId"])
+    .index("by_stripeSubscriptionId", ["stripeSubscriptionId"])
+    .index("by_status", ["status"]),
+
+  // Audit Logs - HIPAA compliance requirement (enhanced for multi-tenant)
+  orgAuditLogs: defineTable({
+    orgId: v.id("organizations"),
+    userId: v.optional(v.id("users")), // Optional for pre-login events
+    authUserId: v.optional(v.string()), // Better Auth ID for login events
+    action: v.string(), // "login", "logout", "create", "read", "update", "delete", "export", "access_denied"
+    entityType: v.string(), // "athlete", "injury", "encounter", "user", "team", etc.
+    entityId: v.optional(v.string()), // ID of the affected entity
+    metadataJson: v.optional(v.string()), // Additional context as JSON
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_userId", ["userId"])
+    .index("by_action", ["action"])
+    .index("by_entityType", ["entityType"])
+    .index("by_createdAt", ["createdAt"])
+    .index("by_orgId_and_createdAt", ["orgId", "createdAt"]),
+
+  // Note Templates - Custom templates for different note types
+  orgNoteTemplates: defineTable({
+    orgId: v.optional(v.id("organizations")), // null for system templates
+    createdByUserId: v.optional(v.id("users")),
+    name: v.string(),
+    description: v.optional(v.string()),
+    templateType: v.string(), // "daily_care", "soap", "initial_eval", "rtp_clearance", "custom"
+    structure: v.string(), // JSON string defining template structure
+    isSystemTemplate: v.boolean(), // Built-in vs user-created
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_createdByUserId", ["createdByUserId"])
+    .index("by_templateType", ["templateType"])
+    .index("by_isSystemTemplate", ["isSystemTemplate"]),
+
+  // =============================================================================
+  // LEGACY TABLES (Kept for backward compatibility - will be deprecated)
+  // =============================================================================
+
+  // Clinician profiles - extends Better Auth user data (LEGACY)
   clinicians: defineTable({
     userId: v.string(), // Links to Better Auth user
     fullName: v.string(),
     email: v.string(),
-    specialty: v.string(), // physician, physical_therapist, chiropractor, dentist, psychologist, trainer, athletic_trainer, other
+    specialty: v.string(),
     licenseNumber: v.optional(v.string()),
     licenseState: v.optional(v.string()),
-    practiceId: v.optional(v.id("practices")), // null for solo practitioners
-    role: v.string(), // owner, admin, clinician
+    practiceId: v.optional(v.id("practices")),
+    role: v.string(),
     isActive: v.boolean(),
-    hasExistingEhr: v.boolean(), // true = EHR integration, false = standalone
-    practiceSize: v.string(), // solo, small, medium, large
-    // Session management for single login enforcement
-    activeSessionId: v.optional(v.string()), // Current active session token
-    activeSessionStartedAt: v.optional(v.number()), // When current session started
-    lastActiveAt: v.optional(v.number()), // Last activity timestamp
+    hasExistingEhr: v.boolean(),
+    practiceSize: v.string(),
+    activeSessionId: v.optional(v.string()),
+    activeSessionStartedAt: v.optional(v.number()),
+    lastActiveAt: v.optional(v.number()),
   })
     .index("by_userId", ["userId"])
     .index("by_email", ["email"])
     .index("by_practiceId", ["practiceId"])
     .index("by_activeSessionId", ["activeSessionId"]),
 
-  // Practices - for multi-clinician accounts
+  // Practices - for multi-clinician accounts (LEGACY)
   practices: defineTable({
     name: v.string(),
     ownerId: v.id("clinicians"),
@@ -38,19 +396,19 @@ export default defineSchema({
     isActive: v.boolean(),
   }).index("by_ownerId", ["ownerId"]),
 
-  // Subscriptions - linked to Stripe
+  // Subscriptions - linked to Stripe (LEGACY)
   subscriptions: defineTable({
-    clinicianId: v.optional(v.id("clinicians")), // For solo plans
-    practiceId: v.optional(v.id("practices")), // For team/practice plans
+    clinicianId: v.optional(v.id("clinicians")),
+    practiceId: v.optional(v.id("practices")),
     stripeCustomerId: v.string(),
     stripeSubscriptionId: v.string(),
-    plan: v.string(), // solo_ehr, solo_standalone, team_ehr, team_standalone, practice_ehr, practice_standalone, enterprise
-    hasEhrIntegration: v.boolean(), // Affects pricing
-    maxClinicians: v.number(), // 1, 5, 10, or -1 for unlimited
-    maxNotesPerMonth: v.number(), // 100, 500, -1 for unlimited
+    plan: v.string(),
+    hasEhrIntegration: v.boolean(),
+    maxClinicians: v.number(),
+    maxNotesPerMonth: v.number(),
     notesUsedThisMonth: v.number(),
-    billingCycleStart: v.number(), // Timestamp
-    status: v.string(), // active, canceled, past_due, trialing
+    billingCycleStart: v.number(),
+    status: v.string(),
     trialEndsAt: v.optional(v.number()),
   })
     .index("by_clinicianId", ["clinicianId"])
@@ -58,20 +416,20 @@ export default defineSchema({
     .index("by_stripeCustomerId", ["stripeCustomerId"])
     .index("by_stripeSubscriptionId", ["stripeSubscriptionId"]),
 
-  // Patients - PHI storage
+  // Patients - PHI storage (LEGACY)
   patients: defineTable({
-    clinicianId: v.id("clinicians"), // Primary clinician
-    practiceId: v.optional(v.id("practices")), // If part of a practice
-    externalEhrId: v.optional(v.string()), // ID from integrated EHR
+    clinicianId: v.id("clinicians"),
+    practiceId: v.optional(v.id("practices")),
+    externalEhrId: v.optional(v.string()),
     firstName: v.string(),
     lastName: v.string(),
-    dateOfBirth: v.optional(v.string()), // ISO date string
+    dateOfBirth: v.optional(v.string()),
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
     address: v.optional(v.string()),
     insuranceProvider: v.optional(v.string()),
     insurancePolicyNumber: v.optional(v.string()),
-    notes: v.optional(v.string()), // General notes about patient
+    notes: v.optional(v.string()),
     isActive: v.boolean(),
   })
     .index("by_clinicianId", ["clinicianId"])
@@ -79,17 +437,17 @@ export default defineSchema({
     .index("by_lastName_firstName", ["lastName", "firstName"])
     .index("by_externalEhrId", ["externalEhrId"]),
 
-  // Sessions - clinical encounters
+  // Sessions - clinical encounters (LEGACY)
   sessions: defineTable({
     patientId: v.id("patients"),
     clinicianId: v.id("clinicians"),
     practiceId: v.optional(v.id("practices")),
-    sessionType: v.string(), // initial, follow_up, check_up, consultation, other
-    previousSessionId: v.optional(v.id("sessions")), // For "build from previous"
-    scheduledAt: v.optional(v.number()), // Timestamp
+    sessionType: v.string(),
+    previousSessionId: v.optional(v.id("sessions")),
+    scheduledAt: v.optional(v.number()),
     startedAt: v.optional(v.number()),
     completedAt: v.optional(v.number()),
-    status: v.string(), // scheduled, in_progress, pending_review, completed, canceled
+    status: v.string(),
     chiefComplaint: v.optional(v.string()),
   })
     .index("by_patientId", ["patientId"])
@@ -98,70 +456,66 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_clinicianId_and_status", ["clinicianId", "status"]),
 
-  // Audio recordings - stored securely
+  // Audio recordings (LEGACY)
   recordings: defineTable({
     sessionId: v.id("sessions"),
     clinicianId: v.id("clinicians"),
-    storageId: v.id("_storage"), // Convex file storage
+    storageId: v.id("_storage"),
     durationSeconds: v.number(),
     mimeType: v.string(),
-    transcriptionStatus: v.string(), // pending, processing, completed, failed
-    assemblyAiTranscriptId: v.optional(v.string()), // AssemblyAI reference
+    transcriptionStatus: v.string(),
+    assemblyAiTranscriptId: v.optional(v.string()),
   })
     .index("by_sessionId", ["sessionId"])
     .index("by_transcriptionStatus", ["transcriptionStatus"]),
 
-  // Transcriptions - from AssemblyAI
+  // Transcriptions (LEGACY)
   transcriptions: defineTable({
     recordingId: v.id("recordings"),
     sessionId: v.id("sessions"),
-    text: v.string(), // Full transcription text
-    confidence: v.optional(v.number()), // Overall confidence score
-    words: v.optional(v.string()), // JSON string of word-level data with timestamps
+    text: v.string(),
+    confidence: v.optional(v.number()),
+    words: v.optional(v.string()),
     assemblyAiTranscriptId: v.string(),
   })
     .index("by_recordingId", ["recordingId"])
     .index("by_sessionId", ["sessionId"]),
 
-  // Clinical notes - generated from transcriptions
+  // Clinical notes (LEGACY)
   clinicalNotes: defineTable({
     sessionId: v.id("sessions"),
     patientId: v.id("patients"),
     clinicianId: v.id("clinicians"),
     transcriptionId: v.optional(v.id("transcriptions")),
-    noteType: v.string(), // soap, summary, custom
-    // SOAP fields
+    noteType: v.string(),
     subjective: v.optional(v.string()),
     objective: v.optional(v.string()),
     assessment: v.optional(v.string()),
     plan: v.optional(v.string()),
-    // Summary field
     summaryText: v.optional(v.string()),
-    // Custom note field
     customText: v.optional(v.string()),
     customTemplateName: v.optional(v.string()),
-    // Metadata
-    isFinalized: v.boolean(), // Once finalized, creates audit trail for edits
+    isFinalized: v.boolean(),
     finalizedAt: v.optional(v.number()),
     exportedToEhr: v.boolean(),
     exportedAt: v.optional(v.number()),
-    version: v.number(), // For versioning edits
+    version: v.number(),
   })
     .index("by_sessionId", ["sessionId"])
     .index("by_patientId", ["patientId"])
     .index("by_clinicianId", ["clinicianId"])
     .index("by_clinicianId_and_isFinalized", ["clinicianId", "isFinalized"]),
 
-  // Note templates - custom templates for different specialties
+  // Note templates (LEGACY)
   noteTemplates: defineTable({
-    clinicianId: v.optional(v.id("clinicians")), // null for system templates
+    clinicianId: v.optional(v.id("clinicians")),
     practiceId: v.optional(v.id("practices")),
     name: v.string(),
     description: v.optional(v.string()),
-    specialty: v.optional(v.string()), // If specialty-specific
-    templateType: v.string(), // soap, summary, custom
-    structure: v.string(), // JSON string defining template structure
-    isSystemTemplate: v.boolean(), // Built-in vs user-created
+    specialty: v.optional(v.string()),
+    templateType: v.string(),
+    structure: v.string(),
+    isSystemTemplate: v.boolean(),
     isActive: v.boolean(),
   })
     .index("by_clinicianId", ["clinicianId"])
@@ -169,29 +523,27 @@ export default defineSchema({
     .index("by_specialty", ["specialty"])
     .index("by_isSystemTemplate", ["isSystemTemplate"]),
 
-  // Audit log - HIPAA compliance requirement
+  // Audit log (LEGACY)
   auditLogs: defineTable({
     clinicianId: v.id("clinicians"),
-    action: v.string(), // view, create, update, delete, export, access_attempt
-    resourceType: v.string(), // patient, session, note, recording, transcription
-    resourceId: v.string(), // ID of the affected resource
-    details: v.optional(v.string()), // JSON string with additional context
+    action: v.string(),
+    resourceType: v.string(),
+    resourceId: v.string(),
+    details: v.optional(v.string()),
     ipAddress: v.optional(v.string()),
     userAgent: v.optional(v.string()),
   }).index("by_clinicianId", ["clinicianId"]),
 
-  // EHR integrations - configuration per practice/clinician
+  // EHR integrations (LEGACY)
   ehrIntegrations: defineTable({
     clinicianId: v.optional(v.id("clinicians")),
     practiceId: v.optional(v.id("practices")),
-    ehrProvider: v.string(), // epic, cerner, athena, drchrono, etc.
+    ehrProvider: v.string(),
     isActive: v.boolean(),
-    // OAuth tokens stored encrypted
     accessToken: v.optional(v.string()),
     refreshToken: v.optional(v.string()),
     tokenExpiresAt: v.optional(v.number()),
-    // Configuration
-    settings: v.optional(v.string()), // JSON string for provider-specific settings
+    settings: v.optional(v.string()),
   })
     .index("by_clinicianId", ["clinicianId"])
     .index("by_practiceId", ["practiceId"]),
