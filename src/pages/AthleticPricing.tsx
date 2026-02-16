@@ -28,7 +28,7 @@ const pricingTiers: PricingTier[] = [
   {
     name: "Single Team Trial",
     description: "Perfect for small athletic programs",
-    price: 299,
+    price: 3588,
     teams: "1 team",
     atsPerTeam: "1 athletic trainer",
     features: [
@@ -46,7 +46,7 @@ const pricingTiers: PricingTier[] = [
   {
     name: "Department",
     description: "For growing athletic departments",
-    price: 699,
+    price: 8388,
     teams: "Up to 5 teams",
     atsPerTeam: "3 athletic trainers per team",
     features: [
@@ -65,7 +65,7 @@ const pricingTiers: PricingTier[] = [
   {
     name: "Program",
     description: "For full athletic departments",
-    price: 1499,
+    price: 17988,
     teams: "Up to 15 teams",
     atsPerTeam: "5 athletic trainers per team",
     features: [
