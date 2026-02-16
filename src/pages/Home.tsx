@@ -115,6 +115,14 @@ export default function Home() {
               >
                 <Link to="/pricing">View Pricing</Link>
               </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                <Link to="/athletic">Universities/Organizations</Link>
+              </Button>
             </div>
             <p className="mt-4 text-sm text-muted-foreground">
               14-day free trial. No credit card required.

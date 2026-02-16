@@ -2,8 +2,10 @@ import { createBrowserRouter } from "react-router-dom";
 import App from "./App";
 import Home from "./pages/Home";
 import Pricing from "./pages/Pricing";
+import AthleticPricing from "./pages/AthleticPricing";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import RegisterOrganization from "./pages/auth/RegisterOrganization";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
@@ -27,6 +29,10 @@ export const router = createBrowserRouter([
         element: <Pricing />,
       },
       {
+        path: "/athletic",
+        element: <AthleticPricing />,
+      },
+      {
         element: <GuestRoute />,
         children: [
           {
@@ -36,6 +42,10 @@ export const router = createBrowserRouter([
           {
             path: "/register",
             element: <Register />,
+          },
+          {
+            path: "/register/organization",
+            element: <RegisterOrganization />,
           },
           {
             path: "/forgot-password",

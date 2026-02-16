@@ -83,6 +83,12 @@ export default function Header() {
                 Pricing
               </Link>
               <Link
+                to="/athletic"
+                className="hidden md:inline-flex h-9 items-center px-4 text-sm font-medium text-foreground transition hover:text-primary"
+              >
+                Universities/Organizations
+              </Link>
+              <Link
                 to="/login"
                 className="inline-flex h-9 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground shadow-xs transition hover:bg-gray-200"
               >
