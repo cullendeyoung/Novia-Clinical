@@ -354,9 +354,9 @@ export default function RegisterOrganization() {
               <div className="flex items-start gap-3">
                 <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                 <div>
-                  <div className="font-medium">14-day free trial</div>
+                  <div className="font-medium">Quick setup</div>
                   <div className="text-sm text-muted-foreground">
-                    Full access to all features, no credit card required
+                    Get your teams up and running in minutes
                   </div>
                 </div>
               </div>
