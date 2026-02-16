@@ -26,11 +26,11 @@ type PricingTier = {
 
 const pricingTiers: PricingTier[] = [
   {
-    name: "Starter",
+    name: "Single Team Trial",
     description: "Perfect for small athletic programs",
     price: 299,
     teams: "1 team",
-    atsPerTeam: "2 athletic trainers",
+    atsPerTeam: "1 athletic trainer",
     features: [
       "Unlimited athletes",
       "Injury tracking & documentation",
@@ -44,13 +44,13 @@ const pricingTiers: PricingTier[] = [
     ctaLink: "/register/organization",
   },
   {
-    name: "Team",
+    name: "Department",
     description: "For growing athletic departments",
     price: 699,
     teams: "Up to 5 teams",
     atsPerTeam: "3 athletic trainers per team",
     features: [
-      "Everything in Starter",
+      "Everything in Single Team Trial",
       "Multi-team dashboard",
       "Return-to-play workflows",
       "Custom note templates",
@@ -63,13 +63,13 @@ const pricingTiers: PricingTier[] = [
     ctaLink: "/register/organization",
   },
   {
-    name: "Department",
+    name: "Program",
     description: "For full athletic departments",
     price: 1499,
     teams: "Up to 15 teams",
     atsPerTeam: "5 athletic trainers per team",
     features: [
-      "Everything in Team",
+      "Everything in Department",
       "Physician sign-off workflows",
       "Cross-team reporting",
       "Compliance audit logs",
@@ -87,7 +87,7 @@ const pricingTiers: PricingTier[] = [
     teams: "Unlimited teams",
     atsPerTeam: "Unlimited athletic trainers",
     features: [
-      "Everything in Department",
+      "Everything in Program",
       "Multi-institution support",
       "SSO / SAML integration",
       "Custom compliance reports",
