@@ -46,6 +46,7 @@ export default function RegisterOrganization() {
     fullName: "",
     email: "",
     password: "",
+    confirmPassword: "",
     teamCount: "",
     atsPerTeam: "",
   });
@@ -79,6 +80,11 @@ export default function RegisterOrganization() {
       toast.error(
         "Password must be at least 8 characters with uppercase, lowercase, numbers, and special characters"
       );
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -235,6 +241,24 @@ export default function RegisterOrganization() {
                   Min 8 characters with uppercase, lowercase, numbers, and
                   special characters
                 </p>
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  minLength={8}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={(e) =>
+                    setFormData({ ...formData, confirmPassword: e.target.value })
+                  }
+                />
               </div>
 
               <div className="border-t border-slate-200 my-4 pt-4">
