@@ -20,11 +20,9 @@ function Spinner() {
 
 export default function FullPageSpinner() {
   return (
-    <div className="fixed inset-0 z-50 bg-background">
-      <div className="flex h-full items-center justify-center">
-        <div className="-translate-y-16">
-          <Spinner />
-        </div>
+    <div className="flex min-h-[calc(100vh-200px)] items-center justify-center">
+      <div className="-translate-y-16">
+        <Spinner />
       </div>
     </div>
   );

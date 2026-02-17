@@ -9,7 +9,9 @@ import RegisterOrganization from "./pages/auth/RegisterOrganization";
 import OrganizationPayment from "./pages/auth/OrganizationPayment";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
+import OrganizationDashboardLayout from "./components/dashboard/OrganizationDashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
+import OrganizationDashboard from "./pages/dashboard/OrganizationDashboard";
 import NewSession from "./pages/dashboard/NewSession";
 import Patients from "./pages/dashboard/Patients";
 import ErrorPage from "./pages/Error";
@@ -76,6 +78,16 @@ export const router = createBrowserRouter([
               {
                 path: "patients",
                 element: <Patients />,
+              },
+            ],
+          },
+          {
+            path: "/org",
+            element: <OrganizationDashboardLayout />,
+            children: [
+              {
+                index: true,
+                element: <OrganizationDashboard />,
               },
             ],
           },
