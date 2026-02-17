@@ -13,12 +13,20 @@ function getStripe() {
   return new Stripe(secretKey);
 }
 
-// Price IDs for each plan (you'll need to create these in Stripe Dashboard)
-const PLAN_PRICE_IDS: Record<string, string> = {
-  single_team_trial: process.env.STRIPE_PRICE_SINGLE_TEAM || "",
-  department: process.env.STRIPE_PRICE_DEPARTMENT || "",
-  program: process.env.STRIPE_PRICE_PROGRAM || "",
-};
+// Get price ID for a plan (must be called inside handler where env vars are available)
+function getPriceId(plan: string): string {
+  const priceIds: Record<string, string | undefined> = {
+    single_team_trial: process.env.STRIPE_PRICE_SINGLE_TEAM,
+    department: process.env.STRIPE_PRICE_DEPARTMENT,
+    program: process.env.STRIPE_PRICE_PROGRAM,
+  };
+
+  const priceId = priceIds[plan];
+  if (!priceId) {
+    throw new Error(`Price ID not configured for plan: ${plan}. Please set STRIPE_PRICE_${plan.toUpperCase()} environment variable.`);
+  }
+  return priceId;
+}
 
 // Plan details for display
 const PLAN_DETAILS: Record<string, { name: string; teams: number; atsPerTeam: number }> = {
@@ -52,10 +60,7 @@ export const createCheckoutSession = action({
       throw new Error(`Invalid plan: ${args.plan}`);
     }
 
-    const priceId = PLAN_PRICE_IDS[args.plan];
-    if (!priceId) {
-      throw new Error(`Price ID not configured for plan: ${args.plan}. Please set STRIPE_PRICE_${args.plan.toUpperCase()} environment variable.`);
-    }
+    const priceId = getPriceId(args.plan);
 
     // Create or retrieve customer
     const customers = await stripe.customers.list({
