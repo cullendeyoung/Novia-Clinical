@@ -9,12 +9,11 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-// Map plan values to Stripe checkout URLs or Price IDs
-// TODO: Replace these with your actual Stripe Payment Links or integrate with Stripe Checkout API
+// Map plan values to Stripe checkout URLs
 const STRIPE_LINKS: Record<string, string> = {
-  single_team_trial: "https://buy.stripe.com/YOUR_SINGLE_TEAM_LINK",
-  department: "https://buy.stripe.com/YOUR_DEPARTMENT_LINK",
-  program: "https://buy.stripe.com/YOUR_PROGRAM_LINK",
+  single_team_trial: "https://buy.stripe.com/28E00l9gccQm90g6gW3ZK00",
+  department: "https://buy.stripe.com/9B6aEZ6408A64K048O3ZK02",
+  program: "https://buy.stripe.com/bJeaEZcso8A64K020G3ZK01",
   enterprise: "", // Enterprise uses contact form instead
 };
 
