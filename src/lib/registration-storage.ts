@@ -15,14 +15,15 @@ export type RegistrationData = {
 
 export function getStoredRegistrationData(): RegistrationData | null {
   try {
-    const data = sessionStorage.getItem(REGISTRATION_DATA_KEY);
+    // Use localStorage so data persists across tabs (for Stripe redirect)
+    const data = localStorage.getItem(REGISTRATION_DATA_KEY);
     if (!data) return null;
 
     const parsed = JSON.parse(data) as RegistrationData;
 
     // Check if data is still valid (expires after 1 hour)
     if (Date.now() - parsed.timestamp > 60 * 60 * 1000) {
-      sessionStorage.removeItem(REGISTRATION_DATA_KEY);
+      localStorage.removeItem(REGISTRATION_DATA_KEY);
       return null;
     }
 
@@ -33,9 +34,10 @@ export function getStoredRegistrationData(): RegistrationData | null {
 }
 
 export function setStoredRegistrationData(data: RegistrationData): void {
-  sessionStorage.setItem(REGISTRATION_DATA_KEY, JSON.stringify(data));
+  // Use localStorage so data persists across tabs (for Stripe redirect)
+  localStorage.setItem(REGISTRATION_DATA_KEY, JSON.stringify(data));
 }
 
 export function clearStoredRegistrationData(): void {
-  sessionStorage.removeItem(REGISTRATION_DATA_KEY);
+  localStorage.removeItem(REGISTRATION_DATA_KEY);
 }
