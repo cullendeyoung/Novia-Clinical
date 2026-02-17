@@ -127,7 +127,13 @@ export default function OrganizationPayment() {
       });
 
       // Redirect to Stripe Checkout
-      window.location.href = result.url;
+      // Use window.open with _top to ensure we're not in an iframe
+      if (window.top !== window.self) {
+        // We're in an iframe, open in top window
+        window.top?.location.assign(result.url);
+      } else {
+        window.location.assign(result.url);
+      }
     } catch (error) {
       console.error("Error creating checkout session:", error);
       toast.error(
