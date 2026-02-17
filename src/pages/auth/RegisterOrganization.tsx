@@ -74,6 +74,9 @@ export default function RegisterOrganization() {
     session?.user?.id ? { authUserId: session.user.id } : "skip"
   );
 
+  // Track if we're still checking for pending org
+  const isCheckingPendingOrg = session?.user?.id && pendingOrg === undefined;
+
   // Redirect to payment if user has pending payment org
   useEffect(() => {
     if (pendingOrg) {
@@ -84,6 +87,18 @@ export default function RegisterOrganization() {
       navigate(`/register/organization/payment?${params.toString()}`, { replace: true });
     }
   }, [pendingOrg, navigate]);
+
+  // Show loading while checking for pending payment org
+  if (isCheckingPendingOrg) {
+    return (
+      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="mt-4 text-muted-foreground">Checking account status...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
