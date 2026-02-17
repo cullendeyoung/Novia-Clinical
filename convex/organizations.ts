@@ -620,3 +620,83 @@ export const createWithSubscription = mutation({
     return { orgId, userId };
   },
 });
+
+// =============================================================================
+// Dev/Test Mutations
+// =============================================================================
+
+/**
+ * Create a test organization with active status (for development/testing)
+ * This bypasses Stripe payment for testing purposes
+ */
+export const createTestOrganization = mutation({
+  args: {
+    name: v.string(),
+    ownerAuthUserId: v.string(),
+    ownerEmail: v.string(),
+    ownerFullName: v.string(),
+  },
+  returns: v.object({
+    orgId: v.id("organizations"),
+    userId: v.id("users"),
+  }),
+  handler: async (ctx, args) => {
+    const timestamp = now();
+
+    // Check if org already exists for this owner
+    const existingOrg = await ctx.db
+      .query("organizations")
+      .withIndex("by_ownerAuthUserId", (q) =>
+        q.eq("ownerAuthUserId", args.ownerAuthUserId)
+      )
+      .first();
+
+    if (existingOrg && !existingOrg.isDeleted) {
+      // Update existing org to active status
+      await ctx.db.patch(existingOrg._id, {
+        status: "active",
+        updatedAt: timestamp,
+      });
+
+      // Find existing user
+      const existingUser = await ctx.db
+        .query("users")
+        .withIndex("by_authUserId", (q) =>
+          q.eq("authUserId", args.ownerAuthUserId)
+        )
+        .first();
+
+      if (existingUser) {
+        return { orgId: existingOrg._id, userId: existingUser._id };
+      }
+    }
+
+    // Create the organization with active status
+    const orgId = await ctx.db.insert("organizations", {
+      name: args.name,
+      status: "active",
+      ownerAuthUserId: args.ownerAuthUserId,
+      teamCount: 5,
+      maxAthleticTrainersPerTeam: 2,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      isDeleted: false,
+    });
+
+    // Create the org admin user
+    const userId = await ctx.db.insert("users", {
+      orgId,
+      authUserId: args.ownerAuthUserId,
+      email: args.ownerEmail,
+      fullName: args.ownerFullName,
+      role: "org_admin",
+      teamIds: [],
+      isActive: true,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      isDeleted: false,
+    });
+
+    return { orgId, userId };
+  },
+});

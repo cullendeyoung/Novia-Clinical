@@ -9,6 +9,7 @@ import RegisterOrganization from "./pages/auth/RegisterOrganization";
 import OrganizationPayment from "./pages/auth/OrganizationPayment";
 import PaymentSuccess from "./pages/auth/PaymentSuccess";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import DevSetup from "./pages/DevSetup";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import OrganizationDashboardLayout from "./components/dashboard/OrganizationDashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
@@ -36,6 +37,10 @@ export const router = createBrowserRouter([
       {
         path: "/athletic",
         element: <AthleticPricing />,
+      },
+      {
+        path: "/dev-setup",
+        element: <DevSetup />,
       },
       {
         element: <GuestRoute />,
