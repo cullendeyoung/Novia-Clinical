@@ -115,15 +115,13 @@ export default function OrganizationPayment() {
     setIsLoading(true);
 
     try {
-      // Create Stripe Checkout Session
+      // Create Stripe Checkout Session (URLs handled server-side)
       const result = await createCheckoutSession({
         plan: registrationData.plan,
         organizationName: registrationData.organizationName,
         email: registrationData.email,
         fullName: registrationData.fullName,
         domain: registrationData.domain || undefined,
-        successUrl: `${window.location.origin}/register/organization/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${window.location.origin}/register/organization/payment?plan=${plan}&org=${encodeURIComponent(orgName)}`,
       });
 
       // Redirect to Stripe Checkout

@@ -37,6 +37,7 @@ const PLAN_DETAILS: Record<string, { name: string; teams: number; atsPerTeam: nu
 
 /**
  * Creates a Stripe Checkout Session for organization subscription
+ * URLs are constructed server-side using SITE_URL env var to avoid iframe issues
  */
 export const createCheckoutSession = action({
   args: {
@@ -45,8 +46,6 @@ export const createCheckoutSession = action({
     email: v.string(),
     fullName: v.string(),
     domain: v.optional(v.string()),
-    successUrl: v.string(),
-    cancelUrl: v.string(),
   },
   returns: v.object({
     sessionId: v.string(),
@@ -54,6 +53,12 @@ export const createCheckoutSession = action({
   }),
   handler: async (_ctx, args) => {
     const stripe = getStripe();
+
+    // Get site URL from environment - REQUIRED for correct redirects
+    const siteUrl = process.env.SITE_URL;
+    if (!siteUrl) {
+      throw new Error("SITE_URL environment variable is not set. Please set it to your app's public URL.");
+    }
 
     const planDetails = PLAN_DETAILS[args.plan];
     if (!planDetails) {
@@ -84,6 +89,10 @@ export const createCheckoutSession = action({
       customerId = customer.id;
     }
 
+    // Construct URLs server-side using the configured SITE_URL
+    const successUrl = `${siteUrl}/register/organization/success?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${siteUrl}/register/organization/payment?plan=${args.plan}&org=${encodeURIComponent(args.organizationName)}`;
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -95,8 +104,8 @@ export const createCheckoutSession = action({
         },
       ],
       mode: "subscription",
-      success_url: args.successUrl,
-      cancel_url: args.cancelUrl,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         organizationName: args.organizationName,
         email: args.email,
