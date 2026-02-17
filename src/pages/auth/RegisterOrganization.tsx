@@ -1,9 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { authClient, useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +13,7 @@ import {
   Shield,
   Activity,
 } from "lucide-react";
+import { setStoredRegistrationData, type RegistrationData } from "@/lib/registration-storage";
 
 const PRICING_PLANS = [
   {
@@ -53,7 +51,6 @@ const PASSWORD_REGEX =
 
 export default function RegisterOrganization() {
   const navigate = useNavigate();
-  const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [formData, setFormData] = useState({
@@ -65,40 +62,6 @@ export default function RegisterOrganization() {
     confirmPassword: "",
     plan: "",
   });
-
-  const createOrganization = useMutation(api.organizations.create);
-
-  // Check if signed-in user has a pending payment organization
-  const pendingOrg = useQuery(
-    api.organizations.getPendingPaymentOrg,
-    session?.user?.id ? { authUserId: session.user.id } : "skip"
-  );
-
-  // Track if we're still checking for pending org
-  const isCheckingPendingOrg = session?.user?.id && pendingOrg === undefined;
-
-  // Redirect to payment if user has pending payment org
-  useEffect(() => {
-    if (pendingOrg) {
-      const params = new URLSearchParams({
-        plan: pendingOrg.plan,
-        org: pendingOrg.name,
-      });
-      navigate(`/register/organization/payment?${params.toString()}`, { replace: true });
-    }
-  }, [pendingOrg, navigate]);
-
-  // Show loading while checking for pending payment org
-  if (isCheckingPendingOrg) {
-    return (
-      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="mt-4 text-muted-foreground">Checking account status...</p>
-        </div>
-      </div>
-    );
-  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -138,47 +101,27 @@ export default function RegisterOrganization() {
 
     setIsLoading(true);
 
-    try {
-      // Create auth account first
-      const { error, data } = await authClient.signUp.email({
-        email: formData.email,
-        password: formData.password,
-        name: formData.fullName,
-      });
+    // Store registration data in sessionStorage (NOT creating account yet)
+    const registrationData: RegistrationData = {
+      organizationName: formData.organizationName,
+      domain: formData.domain,
+      fullName: formData.fullName,
+      email: formData.email,
+      password: formData.password,
+      plan: formData.plan,
+      teams: selectedPlan.teams,
+      atsPerTeam: selectedPlan.atsPerTeam,
+      timestamp: Date.now(),
+    };
 
-      if (error) {
-        toast.error(error?.message || "Failed to create account");
-        setIsLoading(false);
-        return;
-      }
+    setStoredRegistrationData(registrationData);
 
-      // Create organization and org admin user
-      if (data?.user?.id) {
-        await createOrganization({
-          name: formData.organizationName,
-          domain: formData.domain || undefined,
-          ownerAuthUserId: data.user.id,
-          ownerEmail: formData.email,
-          ownerFullName: formData.fullName,
-          teamCount: selectedPlan.teams,
-          maxAthleticTrainersPerTeam: selectedPlan.atsPerTeam,
-        });
-      }
-
-      toast.success("Organization created successfully!");
-      // Redirect to payment page with plan and org name
-      const params = new URLSearchParams({
-        plan: formData.plan,
-        org: formData.organizationName,
-      });
-      navigate(`/register/organization/payment?${params.toString()}`, { replace: true });
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        `Registration failed: ${error instanceof Error ? error.message : "Please try again"}`
-      );
-      setIsLoading(false);
-    }
+    // Redirect to payment page
+    const params = new URLSearchParams({
+      plan: formData.plan,
+      org: formData.organizationName,
+    });
+    navigate(`/register/organization/payment?${params.toString()}`, { replace: true });
   };
 
   return (
@@ -202,7 +145,7 @@ export default function RegisterOrganization() {
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm font-medium text-white">
                   1
                 </div>
-                <span className="text-sm font-medium text-slate-900">Create Organization</span>
+                <span className="text-sm font-medium text-slate-900">Organization Info</span>
               </div>
               <div className="h-px w-8 bg-slate-300" />
               <div className="flex items-center gap-2">
@@ -332,13 +275,13 @@ export default function RegisterOrganization() {
 
               <div className="border-t border-slate-200 my-4 pt-4">
                 <p className="text-sm font-medium text-slate-700 mb-3">
-                  Confirm Your Plan
+                  Select Your Plan
                 </p>
               </div>
 
               {/* Plan Selection */}
               <div className="space-y-2">
-                <Label htmlFor="plan">Select Plan</Label>
+                <Label htmlFor="plan">Plan</Label>
                 <Select
                   id="plan"
                   name="plan"
@@ -360,7 +303,7 @@ export default function RegisterOrganization() {
                 )}
                 {formData.plan === "enterprise" && (
                   <p className="text-xs text-primary">
-                    Payment will be arranged after organization setup
+                    Payment will be arranged after contacting our sales team
                   </p>
                 )}
               </div>
@@ -404,14 +347,14 @@ export default function RegisterOrganization() {
               {isLoading ? (
                 <span className="inline-flex items-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Creating organization...
+                  Preparing payment...
                 </span>
               ) : (
                 "Continue to Payment"
               )}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              You'll complete payment setup in the next step
+              Your account will be created after payment is complete
             </p>
           </form>
 

@@ -7,6 +7,7 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import RegisterOrganization from "./pages/auth/RegisterOrganization";
 import OrganizationPayment from "./pages/auth/OrganizationPayment";
+import PaymentSuccess from "./pages/auth/PaymentSuccess";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import OrganizationDashboardLayout from "./components/dashboard/OrganizationDashboardLayout";
@@ -54,6 +55,10 @@ export const router = createBrowserRouter([
           {
             path: "/register/organization/payment",
             element: <OrganizationPayment />,
+          },
+          {
+            path: "/register/organization/success",
+            element: <PaymentSuccess />,
           },
           {
             path: "/forgot-password",

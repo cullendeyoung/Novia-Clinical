@@ -6,18 +6,12 @@ import FullPageSpinner from "@/components/ui/FullPageSpinner";
 
 /**
  * AuthRouter determines where an authenticated user should be directed:
- * - Org admins (with or without pending payment) -> /org
+ * - Org admins -> /org
  * - Clinicians -> /dashboard
- * - Users with pending payment org -> /org (shows payment page)
+ * - Other users (athletic trainer, physician, etc.) -> /org
  */
 export default function AuthRouter() {
   const { data: session } = authClient.useSession();
-
-  // Check for pending payment org by owner ID (works even without full auth context)
-  const pendingOrg = useQuery(
-    api.organizations.getPendingPaymentOrg,
-    session?.user?.id ? { authUserId: session.user.id } : "skip"
-  );
 
   // Check if user has a user record (org admin, athletic trainer, etc.)
   const currentUser = useQuery(
@@ -37,14 +31,8 @@ export default function AuthRouter() {
   }
 
   // Still loading data - only show spinner if queries are truly loading (undefined)
-  if (pendingOrg === undefined && currentUser === undefined && clinician === undefined) {
+  if (currentUser === undefined && clinician === undefined) {
     return <FullPageSpinner />;
-  }
-
-  // If user has a pending payment organization, redirect to org dashboard
-  // This takes priority because they need to pay before accessing anything
-  if (pendingOrg) {
-    return <Navigate to="/org" replace />;
   }
 
   // If user is an org_admin, redirect to org dashboard

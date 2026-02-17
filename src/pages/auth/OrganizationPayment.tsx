@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,7 +7,9 @@ import {
   Check,
   Shield,
   ArrowLeft,
+  AlertCircle,
 } from "lucide-react";
+import { getStoredRegistrationData } from "@/lib/registration-storage";
 
 // Map plan values to Stripe checkout URLs
 const STRIPE_LINKS: Record<string, string> = {
@@ -82,13 +84,17 @@ const PLAN_DETAILS: Record<
 export default function OrganizationPayment() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
 
   const plan = searchParams.get("plan") || "single_team_trial";
   const orgName = searchParams.get("org") || "Your Organization";
 
   const planDetails = PLAN_DETAILS[plan] || PLAN_DETAILS.single_team_trial;
   const stripeLink = STRIPE_LINKS[plan];
+
+  // Check if we have registration data - computed synchronously, no setState needed
+  const hasRegistrationData = useMemo(() => {
+    return getStoredRegistrationData() !== null;
+  }, []);
 
   useEffect(() => {
     // If no valid plan, redirect back to registration
@@ -112,10 +118,33 @@ export default function OrganizationPayment() {
       return;
     }
 
-    setIsLoading(true);
     // Redirect to Stripe Checkout
+    // Note: After successful payment, Stripe will redirect to the success URL
+    // which should be configured in your Stripe Payment Link settings
     window.location.href = stripeLink;
   };
+
+  // Show warning if no registration data
+  if (!hasRegistrationData) {
+    return (
+      <div className="flex min-h-[calc(100vh-200px)] items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+            <AlertCircle className="h-6 w-6 text-amber-600" />
+          </div>
+          <h1 className="font-heading text-2xl font-semibold mb-2">
+            Registration Data Not Found
+          </h1>
+          <p className="text-muted-foreground mb-6">
+            Your registration session has expired or was not found. Please start the registration process again.
+          </p>
+          <Button asChild>
+            <Link to="/register/organization">Start Registration</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-200px)] items-center justify-center px-4 py-12">
@@ -140,7 +169,7 @@ export default function OrganizationPayment() {
                   <Check className="h-4 w-4" />
                 </div>
                 <span className="text-sm text-slate-500">
-                  Organization Created
+                  Organization Info
                 </span>
               </div>
               <div className="h-px w-8 bg-primary" />
@@ -153,6 +182,14 @@ export default function OrganizationPayment() {
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Info Note */}
+          <div className="mb-6 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 text-blue-600 mt-0.5" />
+            <p className="text-sm text-blue-800">
+              Your account will be created automatically after your payment is processed successfully.
+            </p>
           </div>
 
           {/* Plan Summary */}
@@ -209,14 +246,8 @@ export default function OrganizationPayment() {
               onClick={handlePayment}
               className="w-full"
               size="lg"
-              disabled={isLoading}
             >
-              {isLoading ? (
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Redirecting to payment...
-                </span>
-              ) : plan === "enterprise" ? (
+              {plan === "enterprise" ? (
                 "Contact Sales"
               ) : (
                 `Pay ${planDetails.price}`
