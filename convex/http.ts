@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { authClient, createAuth } from "./auth";
+import { internal } from "./_generated/api";
 import Stripe from "stripe";
 
 const http = httpRouter();
@@ -12,7 +13,7 @@ authClient.registerRoutes(http, createAuth, { cors: true });
 http.route({
   path: "/stripe/webhook",
   method: "POST",
-  handler: httpAction(async (_ctx, req) => {
+  handler: httpAction(async (ctx, req) => {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -75,20 +76,24 @@ http.route({
         const subscription = event.data.object as Stripe.Subscription;
         console.log("Subscription updated:", subscription.id, subscription.status);
 
-        // Handle subscription status changes (past_due, canceled, etc.)
-        if (subscription.status === "past_due" || subscription.status === "canceled") {
-          const customerId = typeof subscription.customer === "string"
-            ? subscription.customer
-            : subscription.customer.id;
-          console.log("Subscription status changed for customer:", customerId);
-          // TODO: Query org by stripeCustomerId and update status
-        }
+        const customerId = typeof subscription.customer === "string"
+          ? subscription.customer
+          : subscription.customer.id;
+
+        await ctx.runMutation(internal.stripeWebhooks.updateSubscriptionStatus, {
+          stripeCustomerId: customerId,
+          stripeStatus: subscription.status,
+        });
         break;
       }
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
         console.log("Subscription deleted:", subscription.id);
+
+        await ctx.runMutation(internal.stripeWebhooks.handleSubscriptionDeleted, {
+          stripeSubscriptionId: subscription.id,
+        });
         break;
       }
 
@@ -101,7 +106,17 @@ http.route({
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         console.log("Invoice payment failed:", invoice.id);
-        // TODO: Update org status to past_due
+
+        const customerId = typeof invoice.customer === "string"
+          ? invoice.customer
+          : invoice.customer?.id;
+
+        if (customerId) {
+          await ctx.runMutation(internal.stripeWebhooks.handleFailedPayment, {
+            stripeCustomerId: customerId,
+            invoiceId: invoice.id,
+          });
+        }
         break;
       }
 
