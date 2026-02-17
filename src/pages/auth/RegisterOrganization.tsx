@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
+import { authClient, useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +53,7 @@ const PASSWORD_REGEX =
 
 export default function RegisterOrganization() {
   const navigate = useNavigate();
+  const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [formData, setFormData] = useState({
@@ -66,6 +67,23 @@ export default function RegisterOrganization() {
   });
 
   const createOrganization = useMutation(api.organizations.create);
+
+  // Check if signed-in user has a pending payment organization
+  const pendingOrg = useQuery(
+    api.organizations.getPendingPaymentOrg,
+    session?.user?.id ? { authUserId: session.user.id } : "skip"
+  );
+
+  // Redirect to payment if user has pending payment org
+  useEffect(() => {
+    if (pendingOrg) {
+      const params = new URLSearchParams({
+        plan: pendingOrg.plan,
+        org: pendingOrg.name,
+      });
+      navigate(`/register/organization/payment?${params.toString()}`, { replace: true });
+    }
+  }, [pendingOrg, navigate]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

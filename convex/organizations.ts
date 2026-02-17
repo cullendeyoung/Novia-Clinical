@@ -32,6 +32,7 @@ export const getCurrent = query({
       domain: v.optional(v.string()),
       settingsJson: v.optional(v.string()),
       status: v.union(
+        v.literal("pending_payment"),
         v.literal("trial"),
         v.literal("active"),
         v.literal("past_due"),
@@ -71,6 +72,7 @@ export const getById = query({
       domain: v.optional(v.string()),
       settingsJson: v.optional(v.string()),
       status: v.union(
+        v.literal("pending_payment"),
         v.literal("trial"),
         v.literal("active"),
         v.literal("past_due"),
@@ -192,12 +194,14 @@ export const getByOwnerAuthUserId = query({
       name: v.string(),
       domain: v.optional(v.string()),
       status: v.union(
+        v.literal("pending_payment"),
         v.literal("trial"),
         v.literal("active"),
         v.literal("past_due"),
         v.literal("canceled")
       ),
       teamCount: v.number(),
+      maxAthleticTrainersPerTeam: v.number(),
     }),
     v.null()
   ),
@@ -218,6 +222,55 @@ export const getByOwnerAuthUserId = query({
       domain: org.domain,
       status: org.status,
       teamCount: org.teamCount,
+      maxAthleticTrainersPerTeam: org.maxAthleticTrainersPerTeam,
+    };
+  },
+});
+
+/**
+ * Get pending payment organization for current user
+ * Used to redirect signed-in users to payment page if they haven't paid
+ */
+export const getPendingPaymentOrg = query({
+  args: { authUserId: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("organizations"),
+      name: v.string(),
+      teamCount: v.number(),
+      maxAthleticTrainersPerTeam: v.number(),
+      plan: v.string(), // Derived from teamCount/maxATs
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const org = await ctx.db
+      .query("organizations")
+      .withIndex("by_ownerAuthUserId", (q) =>
+        q.eq("ownerAuthUserId", args.authUserId)
+      )
+      .first();
+
+    if (!org || org.isDeleted || org.status !== "pending_payment") {
+      return null;
+    }
+
+    // Derive plan from team count and ATs per team
+    let plan = "single_team_trial";
+    if (org.teamCount >= 15 || org.maxAthleticTrainersPerTeam >= 3) {
+      plan = "program";
+    } else if (org.teamCount >= 5 || org.maxAthleticTrainersPerTeam >= 2) {
+      plan = "department";
+    } else if (org.teamCount >= 999) {
+      plan = "enterprise";
+    }
+
+    return {
+      _id: org._id,
+      name: org.name,
+      teamCount: org.teamCount,
+      maxAthleticTrainersPerTeam: org.maxAthleticTrainersPerTeam,
+      plan,
     };
   },
 });
@@ -273,7 +326,7 @@ export const create = mutation({
     const orgId = await ctx.db.insert("organizations", {
       name: args.name,
       domain: args.domain,
-      status: "trial", // Start with trial
+      status: "pending_payment", // Payment required before access
       ownerAuthUserId: args.ownerAuthUserId,
       teamCount: args.teamCount,
       maxAthleticTrainersPerTeam: args.maxAthleticTrainersPerTeam,
@@ -366,6 +419,7 @@ export const updateStatus = mutation({
   args: {
     orgId: v.id("organizations"),
     status: v.union(
+      v.literal("pending_payment"),
       v.literal("trial"),
       v.literal("active"),
       v.literal("past_due"),

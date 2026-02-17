@@ -18,6 +18,7 @@ const roleValidator = v.union(
 
 // Organization status types
 const orgStatusValidator = v.union(
+  v.literal("pending_payment"), // Organization created but payment not completed
   v.literal("trial"),
   v.literal("active"),
   v.literal("past_due"),

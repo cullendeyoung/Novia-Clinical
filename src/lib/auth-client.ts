@@ -16,3 +16,6 @@ export const authClient = createAuthClient({
     refetchInterval: 0,
   },
 });
+
+// Export useSession hook for checking current session
+export const useSession = authClient.useSession;
