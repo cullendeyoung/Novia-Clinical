@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
@@ -16,44 +16,83 @@ import {
   type RegistrationData,
 } from "@/lib/registration-storage";
 
-type Status = "loading" | "creating" | "success" | "error" | "no_data";
+type Status = "loading" | "verifying" | "creating" | "success" | "error" | "no_session";
 
 export default function PaymentSuccess() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<Status>("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
 
-  const createOrganization = useMutation(api.organizations.create);
+  const verifyCheckoutSession = useAction(api.stripe.verifyCheckoutSession);
+  const createOrganization = useMutation(api.organizations.createWithSubscription);
 
   useEffect(() => {
     const processPayment = async () => {
-      // Get stored registration data
-      const data = getStoredRegistrationData();
+      const sessionId = searchParams.get("session_id");
 
-      if (!data) {
-        setStatus("no_data");
+      // If no session ID, check for stored registration data (fallback for old flow)
+      if (!sessionId) {
+        const storedData = getStoredRegistrationData();
+        if (!storedData) {
+          setStatus("no_session");
+          return;
+        }
+        // Process with stored data only (legacy flow)
+        await processWithStoredData(storedData);
         return;
       }
 
-      setRegistrationData(data);
-      setStatus("creating");
+      // Verify Stripe checkout session
+      setStatus("verifying");
 
       try {
+        const result = await verifyCheckoutSession({ sessionId });
+
+        if (!result.success) {
+          setErrorMessage(result.error);
+          setStatus("error");
+          return;
+        }
+
+        // Get stored registration data for password
+        const storedData = getStoredRegistrationData();
+        if (!storedData) {
+          setErrorMessage("Registration session expired. Please contact support with your payment confirmation.");
+          setStatus("error");
+          return;
+        }
+
+        // Update registration data with verified info from Stripe
+        const verifiedData: RegistrationData = {
+          organizationName: result.organizationName,
+          email: result.email,
+          fullName: result.fullName,
+          domain: result.domain,
+          plan: result.plan,
+          teams: result.teams,
+          atsPerTeam: result.atsPerTeam,
+          password: storedData.password, // From session storage
+          timestamp: storedData.timestamp,
+        };
+
+        setRegistrationData(verifiedData);
+        setStatus("creating");
+
         // Create auth account
         const { error, data: authData } = await authClient.signUp.email({
-          email: data.email,
-          password: data.password,
-          name: data.fullName,
+          email: verifiedData.email,
+          password: verifiedData.password,
+          name: verifiedData.fullName,
         });
 
         if (error) {
-          // Check if user already exists (might have refreshed the page)
+          // Check if user already exists
           if (error.message?.includes("already exists") || error.message?.includes("already registered")) {
-            // Try to sign in instead
             const signInResult = await authClient.signIn.email({
-              email: data.email,
-              password: data.password,
+              email: verifiedData.email,
+              password: verifiedData.password,
             });
 
             if (signInResult.error) {
@@ -62,7 +101,6 @@ export default function PaymentSuccess() {
               return;
             }
 
-            // Account already exists, clear data and redirect
             clearStoredRegistrationData();
             setStatus("success");
             return;
@@ -73,7 +111,66 @@ export default function PaymentSuccess() {
           return;
         }
 
-        // Create organization and org admin user
+        // Create organization with subscription
+        if (authData?.user?.id) {
+          await createOrganization({
+            name: verifiedData.organizationName,
+            domain: verifiedData.domain || undefined,
+            ownerAuthUserId: authData.user.id,
+            ownerEmail: verifiedData.email,
+            ownerFullName: verifiedData.fullName,
+            teamCount: verifiedData.teams,
+            maxAthleticTrainersPerTeam: verifiedData.atsPerTeam,
+            stripeCustomerId: result.customerId,
+            stripeSubscriptionId: result.subscriptionId,
+            plan: verifiedData.plan,
+          });
+        }
+
+        clearStoredRegistrationData();
+        setStatus("success");
+        toast.success("Account created successfully!");
+      } catch (err) {
+        console.error("Error processing payment:", err);
+        setErrorMessage(err instanceof Error ? err.message : "An unexpected error occurred");
+        setStatus("error");
+      }
+    };
+
+    const processWithStoredData = async (data: RegistrationData) => {
+      setRegistrationData(data);
+      setStatus("creating");
+
+      try {
+        const { error, data: authData } = await authClient.signUp.email({
+          email: data.email,
+          password: data.password,
+          name: data.fullName,
+        });
+
+        if (error) {
+          if (error.message?.includes("already exists") || error.message?.includes("already registered")) {
+            const signInResult = await authClient.signIn.email({
+              email: data.email,
+              password: data.password,
+            });
+
+            if (signInResult.error) {
+              setErrorMessage(signInResult.error.message || "Failed to sign in");
+              setStatus("error");
+              return;
+            }
+
+            clearStoredRegistrationData();
+            setStatus("success");
+            return;
+          }
+
+          setErrorMessage(error.message || "Failed to create account");
+          setStatus("error");
+          return;
+        }
+
         if (authData?.user?.id) {
           await createOrganization({
             name: data.organizationName,
@@ -83,13 +180,13 @@ export default function PaymentSuccess() {
             ownerFullName: data.fullName,
             teamCount: data.teams,
             maxAthleticTrainersPerTeam: data.atsPerTeam,
+            stripeCustomerId: "", // No Stripe info for legacy flow
+            stripeSubscriptionId: "",
+            plan: data.plan,
           });
         }
 
-        // Clear stored registration data
         clearStoredRegistrationData();
-
-        // Success!
         setStatus("success");
         toast.success("Account created successfully!");
       } catch (err) {
@@ -100,7 +197,7 @@ export default function PaymentSuccess() {
     };
 
     processPayment();
-  }, [createOrganization]);
+  }, [searchParams, verifyCheckoutSession, createOrganization]);
 
   // Redirect to dashboard after success
   useEffect(() => {
@@ -112,25 +209,27 @@ export default function PaymentSuccess() {
     }
   }, [status, navigate]);
 
-  if (status === "loading" || status === "creating") {
+  if (status === "loading" || status === "verifying" || status === "creating") {
     return (
       <div className="flex min-h-[calc(100vh-200px)] items-center justify-center px-4 py-12">
         <div className="w-full max-w-md text-center">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <h1 className="font-heading text-2xl font-semibold mb-2">
-            {status === "loading" ? "Processing Payment..." : "Creating Your Account..."}
+            {status === "loading" && "Processing..."}
+            {status === "verifying" && "Verifying Payment..."}
+            {status === "creating" && "Creating Your Account..."}
           </h1>
           <p className="text-muted-foreground">
-            {status === "loading"
-              ? "Please wait while we verify your payment."
-              : "Setting up your organization and admin account."}
+            {status === "loading" && "Please wait while we process your request."}
+            {status === "verifying" && "Confirming your payment with Stripe."}
+            {status === "creating" && "Setting up your organization and admin account."}
           </p>
         </div>
       </div>
     );
   }
 
-  if (status === "no_data") {
+  if (status === "no_session") {
     return (
       <div className="flex min-h-[calc(100vh-200px)] items-center justify-center px-4 py-12">
         <div className="w-full max-w-md text-center">
@@ -138,10 +237,10 @@ export default function PaymentSuccess() {
             <AlertCircle className="h-6 w-6 text-amber-600" />
           </div>
           <h1 className="font-heading text-2xl font-semibold mb-2">
-            Session Expired
+            Session Not Found
           </h1>
           <p className="text-muted-foreground mb-6">
-            Your registration session has expired. If you completed payment, please contact support to set up your account.
+            We couldn't find your payment session. If you completed payment, please contact support with your payment confirmation.
           </p>
           <div className="space-y-3">
             <Button asChild className="w-full">

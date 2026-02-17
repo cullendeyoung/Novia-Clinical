@@ -487,3 +487,136 @@ export const softDelete = mutation({
     return true;
   },
 });
+
+// =============================================================================
+// Public Mutations (for Stripe integration)
+// =============================================================================
+
+/**
+ * Create organization with subscription (called after successful Stripe payment)
+ * This mutation creates org with active status and subscription record
+ */
+export const createWithSubscription = mutation({
+  args: {
+    name: v.string(),
+    domain: v.optional(v.string()),
+    ownerAuthUserId: v.string(),
+    ownerEmail: v.string(),
+    ownerFullName: v.string(),
+    teamCount: v.number(),
+    maxAthleticTrainersPerTeam: v.number(),
+    stripeCustomerId: v.string(),
+    stripeSubscriptionId: v.string(),
+    plan: v.string(),
+  },
+  returns: v.object({
+    orgId: v.id("organizations"),
+    userId: v.id("users"),
+  }),
+  handler: async (ctx, args) => {
+    const timestamp = now();
+
+    // Check if org already exists for this owner
+    const existingOrg = await ctx.db
+      .query("organizations")
+      .withIndex("by_ownerAuthUserId", (q) =>
+        q.eq("ownerAuthUserId", args.ownerAuthUserId)
+      )
+      .first();
+
+    if (existingOrg && !existingOrg.isDeleted) {
+      // Update existing org to active status
+      await ctx.db.patch(existingOrg._id, {
+        status: "active",
+        updatedAt: timestamp,
+      });
+
+      // Find existing user
+      const existingUser = await ctx.db
+        .query("users")
+        .withIndex("by_authUserId", (q) =>
+          q.eq("authUserId", args.ownerAuthUserId)
+        )
+        .first();
+
+      if (existingUser) {
+        // Create subscription record
+        await ctx.db.insert("orgSubscriptions", {
+          orgId: existingOrg._id,
+          stripeCustomerId: args.stripeCustomerId,
+          stripeSubscriptionId: args.stripeSubscriptionId,
+          plan: args.plan,
+          teamCount: args.teamCount,
+          athleticTrainersPerTeam: args.maxAthleticTrainersPerTeam,
+          status: "active",
+          billingCycleStart: timestamp,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+
+        return { orgId: existingOrg._id, userId: existingUser._id };
+      }
+    }
+
+    // Create the organization with active status
+    const orgId = await ctx.db.insert("organizations", {
+      name: args.name,
+      domain: args.domain,
+      status: "active", // Already paid!
+      ownerAuthUserId: args.ownerAuthUserId,
+      teamCount: args.teamCount,
+      maxAthleticTrainersPerTeam: args.maxAthleticTrainersPerTeam,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      isDeleted: false,
+    });
+
+    // Create the org admin user
+    const userId = await ctx.db.insert("users", {
+      orgId,
+      authUserId: args.ownerAuthUserId,
+      email: args.ownerEmail,
+      fullName: args.ownerFullName,
+      role: "org_admin",
+      teamIds: [], // Org admins have access to all teams
+      isActive: true,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      isDeleted: false,
+    });
+
+    // Create subscription record
+    await ctx.db.insert("orgSubscriptions", {
+      orgId,
+      stripeCustomerId: args.stripeCustomerId,
+      stripeSubscriptionId: args.stripeSubscriptionId,
+      plan: args.plan,
+      teamCount: args.teamCount,
+      athleticTrainersPerTeam: args.maxAthleticTrainersPerTeam,
+      status: "active",
+      billingCycleStart: timestamp,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+
+    // Log the creation
+    await ctx.db.insert("orgAuditLogs", {
+      orgId,
+      userId,
+      authUserId: args.ownerAuthUserId,
+      action: "create",
+      entityType: "organization",
+      entityId: orgId,
+      metadataJson: JSON.stringify({
+        name: args.name,
+        domain: args.domain,
+        teamCount: args.teamCount,
+        plan: args.plan,
+        stripeCustomerId: args.stripeCustomerId,
+      }),
+      createdAt: timestamp,
+    });
+
+    return { orgId, userId };
+  },
+});

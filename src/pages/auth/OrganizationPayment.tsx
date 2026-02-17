@@ -1,5 +1,8 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { useAction } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import {
   Building2,
@@ -10,14 +13,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { getStoredRegistrationData } from "@/lib/registration-storage";
-
-// Map plan values to Stripe checkout URLs
-const STRIPE_LINKS: Record<string, string> = {
-  single_team_trial: "https://buy.stripe.com/28E00l9gccQm90g6gW3ZK00",
-  department: "https://buy.stripe.com/9B6aEZ6408A64K048O3ZK02",
-  program: "https://buy.stripe.com/bJeaEZcso8A64K020G3ZK01",
-  enterprise: "", // Enterprise uses contact form instead
-};
 
 const PLAN_DETAILS: Record<
   string,
@@ -84,17 +79,18 @@ const PLAN_DETAILS: Record<
 export default function OrganizationPayment() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const createCheckoutSession = useAction(api.stripe.createCheckoutSession);
 
   const plan = searchParams.get("plan") || "single_team_trial";
   const orgName = searchParams.get("org") || "Your Organization";
 
   const planDetails = PLAN_DETAILS[plan] || PLAN_DETAILS.single_team_trial;
-  const stripeLink = STRIPE_LINKS[plan];
 
-  // Check if we have registration data - computed synchronously, no setState needed
-  const hasRegistrationData = useMemo(() => {
-    return getStoredRegistrationData() !== null;
-  }, []);
+  // Get registration data
+  const registrationData = useMemo(() => getStoredRegistrationData(), []);
+  const hasRegistrationData = registrationData !== null;
 
   useEffect(() => {
     // If no valid plan, redirect back to registration
@@ -103,25 +99,44 @@ export default function OrganizationPayment() {
     }
   }, [plan, navigate]);
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (plan === "enterprise") {
       // Redirect to contact page for enterprise
       navigate("/contact?inquiry=enterprise");
       return;
     }
 
-    if (!stripeLink || stripeLink.includes("YOUR_")) {
-      // Stripe not configured yet - show message
-      alert(
-        "Payment system is being configured. Please contact support@novia.com to complete your subscription."
-      );
+    if (!registrationData) {
+      toast.error("Registration data not found. Please start over.");
+      navigate("/register/organization");
       return;
     }
 
-    // Redirect to Stripe Checkout
-    // Note: After successful payment, Stripe will redirect to the success URL
-    // which should be configured in your Stripe Payment Link settings
-    window.location.href = stripeLink;
+    setIsLoading(true);
+
+    try {
+      // Create Stripe Checkout Session
+      const result = await createCheckoutSession({
+        plan: registrationData.plan,
+        organizationName: registrationData.organizationName,
+        email: registrationData.email,
+        fullName: registrationData.fullName,
+        domain: registrationData.domain || undefined,
+        successUrl: `${window.location.origin}/register/organization/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/register/organization/payment?plan=${plan}&org=${encodeURIComponent(orgName)}`,
+      });
+
+      // Redirect to Stripe Checkout
+      window.location.href = result.url;
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to create checkout session. Please try again."
+      );
+      setIsLoading(false);
+    }
   };
 
   // Show warning if no registration data
@@ -246,8 +261,14 @@ export default function OrganizationPayment() {
               onClick={handlePayment}
               className="w-full"
               size="lg"
+              disabled={isLoading}
             >
-              {plan === "enterprise" ? (
+              {isLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Redirecting to Stripe...
+                </span>
+              ) : plan === "enterprise" ? (
                 "Contact Sales"
               ) : (
                 `Pay ${planDetails.price}`
@@ -258,6 +279,7 @@ export default function OrganizationPayment() {
               variant="ghost"
               className="w-full"
               asChild
+              disabled={isLoading}
             >
               <Link to="/register/organization">
                 <ArrowLeft className="mr-2 h-4 w-4" />
