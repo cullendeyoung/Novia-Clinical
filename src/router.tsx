@@ -17,6 +17,7 @@ import Patients from "./pages/dashboard/Patients";
 import ErrorPage from "./pages/Error";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import GuestRoute from "./components/auth/GuestRoute";
+import AuthRouter from "./components/auth/AuthRouter";
 
 export const router = createBrowserRouter([
   {
@@ -63,6 +64,10 @@ export const router = createBrowserRouter([
       {
         element: <ProtectedRoute />,
         children: [
+          {
+            path: "/auth-router",
+            element: <AuthRouter />,
+          },
           {
             path: "/dashboard",
             element: <DashboardLayout />,
