@@ -14,7 +14,6 @@ import {
   AlertCircle,
   Mail,
   Copy,
-  Check,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -60,7 +59,6 @@ export default function Athletes() {
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [copiedEmail, setCopiedEmail] = useState(false);
 
   // Form state - Essential info (AT fills)
   const [firstName, setFirstName] = useState("");
@@ -289,16 +287,6 @@ ${orgName} Athletic Training`;
     return { subject, body, inviteCode };
   };
 
-  const copyInviteEmail = async () => {
-    const { subject, body } = generateInviteEmail();
-    const fullEmail = `Subject: ${subject}\n\n${body}`;
-
-    await navigator.clipboard.writeText(fullEmail);
-    setCopiedEmail(true);
-    toast.success("Invite email copied! Paste into your email client.");
-    setTimeout(() => setCopiedEmail(false), 3000);
-  };
-
   const openEmailClient = () => {
     const { subject, body } = generateInviteEmail();
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -370,10 +358,10 @@ ${orgName} Athletic Training`;
           <div className="flex items-start justify-between mb-4">
             <div>
               <h2 className="font-heading text-lg font-semibold text-slate-900">
-                Invite Athletes to Join
+                Invite Through Email
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Send athletes an email with the registration link. They'll create their own account and appear on your roster.
+                Opens your email app with a pre-filled invite. Just add athlete email addresses and send.
               </p>
             </div>
             <Button
@@ -386,46 +374,16 @@ ${orgName} Athletic Training`;
             </Button>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Option 1: Copy Email */}
-            <div className="rounded-lg border border-slate-200 bg-white p-4">
-              <h3 className="font-medium text-slate-900 mb-2">Option 1: Copy & Paste</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Copy a pre-written invite email, then paste it into your email client (Gmail, Outlook, etc.) and add recipient emails.
-              </p>
-              <Button onClick={copyInviteEmail} className="w-full">
-                {copiedEmail ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy Invite Email
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {/* Option 2: Open Email Client */}
-            <div className="rounded-lg border border-slate-200 bg-white p-4">
-              <h3 className="font-medium text-slate-900 mb-2">Option 2: Open Email App</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Opens your default email app with the invite pre-filled. Just add athlete emails to the "To" field and send.
-              </p>
-              <Button onClick={openEmailClient} variant="outline" className="w-full">
-                <Mail className="mr-2 h-4 w-4" />
-                Open in Email App
-              </Button>
-            </div>
-          </div>
+          <Button onClick={openEmailClient} className="w-full md:w-auto">
+            <Mail className="mr-2 h-4 w-4" />
+            Open in Email App
+          </Button>
 
           {/* Invite Code Reference */}
           <div className="mt-4 rounded-md bg-slate-100 p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">Team Invite Code</p>
+                <p className="text-xs text-muted-foreground">Team Invite Code (for reference)</p>
                 <code className="font-mono text-lg font-semibold text-slate-900">
                   {team.inviteCode}
                 </code>
