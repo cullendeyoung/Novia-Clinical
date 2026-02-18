@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Copy,
   Check,
+  Mail,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -224,6 +225,7 @@ export default function Teams() {
               copiedCode={copiedCode}
               getSportLabel={getSportLabel}
               getSeasonLabel={getSeasonLabel}
+              orgName={organization?.name || "Your Organization"}
             />
           ))}
         </div>
@@ -238,6 +240,7 @@ function TeamCard({
   copiedCode,
   getSportLabel,
   getSeasonLabel,
+  orgName,
 }: {
   team: {
     _id: Id<"teams">;
@@ -251,8 +254,55 @@ function TeamCard({
   copiedCode: string | null;
   getSportLabel: (value: string) => string;
   getSeasonLabel: (value: string | undefined) => string | null;
+  orgName: string;
 }) {
   const stats = useQuery(api.teams.getStats, { teamId: team._id });
+  const [copiedEmail, setCopiedEmail] = useState(false);
+
+  const generateInviteEmail = () => {
+    const registrationUrl = `${window.location.origin}/register/athlete?code=${team.inviteCode}`;
+
+    const subject = `Join ${team.name} on Novia - Athletic Training Platform`;
+    const body = `Hi,
+
+You've been invited to join ${team.name} on Novia, our athletic training management platform.
+
+To complete your registration:
+1. Click the link below or copy it into your browser
+2. Create your account using this invite code: ${team.inviteCode}
+3. Complete your profile
+
+Registration Link: ${registrationUrl}
+
+Invite Code: ${team.inviteCode}
+
+Once registered, you'll be able to:
+- View your health records
+- Communicate with athletic trainers
+- Track your injury recovery
+
+If you have any questions, please contact your athletic training staff.
+
+- ${orgName} Athletic Training`;
+
+    return { subject, body };
+  };
+
+  const copyInviteEmail = async () => {
+    const { subject, body } = generateInviteEmail();
+    const fullEmail = `Subject: ${subject}\n\n${body}`;
+
+    await navigator.clipboard.writeText(fullEmail);
+    setCopiedEmail(true);
+    toast.success("Invite email copied! Paste into your email client.");
+    setTimeout(() => setCopiedEmail(false), 3000);
+  };
+
+  const openEmailClient = () => {
+    const { subject, body } = generateInviteEmail();
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoUrl, "_blank");
+  };
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-6 hover:shadow-md transition-shadow">
@@ -292,21 +342,51 @@ function TeamCard({
         </div>
       </div>
 
-      {/* Invite Code */}
+      {/* Invite Code & Email */}
       <div className="rounded-md bg-slate-50 p-3 mb-4">
-        <p className="text-xs text-muted-foreground mb-1">Athlete Invite Code</p>
-        <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground mb-2">Invite Athletes</p>
+        <div className="flex items-center justify-between mb-2">
           <code className="font-mono text-sm font-medium">{team.inviteCode}</code>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onCopyCode(team.inviteCode)}
+            title="Copy code"
           >
             {copiedCode === team.inviteCode ? (
               <Check className="h-4 w-4 text-green-600" />
             ) : (
               <Copy className="h-4 w-4" />
             )}
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 text-xs"
+            onClick={copyInviteEmail}
+          >
+            {copiedEmail ? (
+              <>
+                <Check className="mr-1 h-3 w-3 text-green-600" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="mr-1 h-3 w-3" />
+                Copy Invite Email
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 text-xs"
+            onClick={openEmailClient}
+          >
+            <Mail className="mr-1 h-3 w-3" />
+            Open in Email
           </Button>
         </div>
       </div>
