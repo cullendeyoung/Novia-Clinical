@@ -217,6 +217,183 @@ export const getStats = query({
   },
 });
 
+/**
+ * Get detailed team statistics for management page
+ */
+export const getDetailedStats = query({
+  args: { teamId: v.id("teams") },
+  returns: v.union(
+    v.object({
+      // Athlete counts
+      totalAthletes: v.number(),
+      activeAthletes: v.number(),
+      // Injury breakdown
+      athletesWithActiveInjuries: v.number(),
+      totalActiveInjuries: v.number(),
+      // RTP Status breakdown
+      athletesFull: v.number(),
+      athletesLimited: v.number(),
+      athletesOut: v.number(),
+      // Recent injuries (last 7 days)
+      recentInjuries: v.array(
+        v.object({
+          athleteId: v.id("athletes"),
+          athleteName: v.string(),
+          bodyRegion: v.string(),
+          side: v.string(),
+          injuryDate: v.string(),
+          status: v.string(),
+          rtpStatus: v.string(),
+        })
+      ),
+      // Today's encounters
+      todayEncounters: v.number(),
+      // AT count
+      athleticTrainers: v.array(
+        v.object({
+          _id: v.id("users"),
+          fullName: v.string(),
+          email: v.string(),
+        })
+      ),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const auth = await requireAuth(ctx);
+
+    const team = await verifyTeamInOrg(ctx, auth, args.teamId);
+    if (!team) return null;
+
+    // Get all athletes on this team
+    const athletes = await ctx.db
+      .query("athletes")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+
+    const activeAthletes = athletes.filter((a) => a.isActive && !a.isDeleted);
+    const totalAthletes = athletes.filter((a) => !a.isDeleted).length;
+
+    // Get injuries and RTP status
+    let athletesWithActiveInjuries = 0;
+    let totalActiveInjuries = 0;
+    let athletesFull = 0;
+    let athletesLimited = 0;
+    let athletesOut = 0;
+    const recentInjuries: {
+      athleteId: typeof args.teamId extends never ? never : (typeof athletes)[0]["_id"];
+      athleteName: string;
+      bodyRegion: string;
+      side: string;
+      injuryDate: string;
+      status: string;
+      rtpStatus: string;
+    }[] = [];
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split("T")[0];
+
+    for (const athlete of activeAthletes) {
+      const injuries = await ctx.db
+        .query("injuries")
+        .withIndex("by_athleteId_and_status", (q) =>
+          q.eq("athleteId", athlete._id).eq("status", "active")
+        )
+        .collect();
+
+      const activeInjuries = injuries.filter((i) => !i.isDeleted);
+
+      if (activeInjuries.length > 0) {
+        athletesWithActiveInjuries++;
+        totalActiveInjuries += activeInjuries.length;
+
+        // Check RTP status from most recent injury
+        const mostRecent = activeInjuries.sort((a, b) =>
+          b.injuryDate.localeCompare(a.injuryDate)
+        )[0];
+
+        if (mostRecent.rtpStatus === "out") {
+          athletesOut++;
+        } else if (mostRecent.rtpStatus === "limited") {
+          athletesLimited++;
+        } else {
+          athletesFull++;
+        }
+
+        // Add recent injuries to list
+        for (const injury of activeInjuries) {
+          if (injury.injuryDate >= sevenDaysAgoStr) {
+            recentInjuries.push({
+              athleteId: athlete._id,
+              athleteName: `${athlete.firstName} ${athlete.lastName}`,
+              bodyRegion: injury.bodyRegion,
+              side: injury.side,
+              injuryDate: injury.injuryDate,
+              status: injury.status,
+              rtpStatus: injury.rtpStatus,
+            });
+          }
+        }
+      } else {
+        athletesFull++;
+      }
+    }
+
+    // Sort recent injuries by date descending
+    recentInjuries.sort((a, b) => b.injuryDate.localeCompare(a.injuryDate));
+
+    // Count today's encounters
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    let todayEncounters = 0;
+
+    for (const athlete of activeAthletes) {
+      const encounters = await ctx.db
+        .query("encounters")
+        .withIndex("by_athleteId", (q) => q.eq("athleteId", athlete._id))
+        .collect();
+      todayEncounters += encounters.filter(
+        (e) => !e.isDeleted && e.encounterDatetime >= todayStart.getTime()
+      ).length;
+    }
+
+    // Get ATs assigned to this team
+    const users = await ctx.db
+      .query("users")
+      .withIndex("by_orgId_and_role", (q) =>
+        q.eq("orgId", auth.orgId).eq("role", "athletic_trainer")
+      )
+      .collect();
+
+    const athleticTrainers = users
+      .filter(
+        (u) =>
+          u.isActive &&
+          !u.isDeleted &&
+          (u.teamIds.includes(args.teamId) || u.fullTimeTeamId === args.teamId)
+      )
+      .map((u) => ({
+        _id: u._id,
+        fullName: u.fullName,
+        email: u.email,
+      }));
+
+    return {
+      totalAthletes,
+      activeAthletes: activeAthletes.length,
+      athletesWithActiveInjuries,
+      totalActiveInjuries,
+      athletesFull,
+      athletesLimited,
+      athletesOut,
+      recentInjuries: recentInjuries.slice(0, 10), // Limit to 10 most recent
+      todayEncounters,
+      athleticTrainers,
+    };
+  },
+});
+
 // =============================================================================
 // Mutations
 // =============================================================================
