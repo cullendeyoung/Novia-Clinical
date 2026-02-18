@@ -15,9 +15,17 @@ import {
 export default function OrganizationDashboard() {
   const stats = useQuery(api.organizations.getStats);
   const organization = useQuery(api.organizations.getCurrent);
+  const teams = useQuery(api.teams.list, {});
 
-  // Check if onboarding is needed (no teams created yet)
-  const needsOnboarding = stats?.teamCount === 0;
+  // Check onboarding progress
+  const hasTeams = (stats?.teamCount ?? 0) > 0;
+  const hasStaff = (stats?.athleticTrainerCount ?? 0) > 0;
+  const hasAthletes = (stats?.athleteCount ?? 0) > 0;
+  const needsOnboarding = !hasTeams || !hasStaff || !hasAthletes;
+  const onboardingComplete = hasTeams && hasStaff && hasAthletes;
+
+  // Get first team ID for athlete link
+  const firstTeamId = teams?.[0]?._id;
 
   return (
     <div className="p-6">
@@ -33,7 +41,7 @@ export default function OrganizationDashboard() {
         </p>
       </div>
 
-      {/* Onboarding Section - Show when no teams exist */}
+      {/* Onboarding Section - Show until all steps complete */}
       {needsOnboarding && (
         <div className="mb-8 rounded-lg border-2 border-primary/20 bg-primary/5 p-6">
           <div className="flex items-start gap-4">
@@ -51,56 +59,89 @@ export default function OrganizationDashboard() {
               {/* Onboarding Steps */}
               <div className="space-y-3">
                 {/* Step 1: Create First Team */}
-                <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white text-sm font-medium">
-                    1
+                <div className={`flex items-center gap-3 rounded-lg border bg-white p-4 ${hasTeams ? "border-green-200" : "border-slate-200"}`}>
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${hasTeams ? "bg-green-500 text-white" : "bg-primary text-white"}`}>
+                    {hasTeams ? <CheckCircle className="h-4 w-4" /> : "1"}
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-slate-900">Create your first team</p>
                     <p className="text-sm text-muted-foreground">
-                      Add a team like "Men's Basketball" or "Women's Soccer"
+                      {hasTeams ? `${stats?.teamCount} team${(stats?.teamCount ?? 0) > 1 ? "s" : ""} created` : "Add a team like \"Men's Basketball\" or \"Women's Soccer\""}
                     </p>
                   </div>
-                  <Button asChild size="sm">
-                    <Link to="/org/teams/new">
-                      <Plus className="mr-1 h-4 w-4" />
-                      Create Team
-                    </Link>
-                  </Button>
+                  {hasTeams ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/org/teams">
+                        Manage Teams
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button asChild size="sm">
+                      <Link to="/org/teams">
+                        <Plus className="mr-1 h-4 w-4" />
+                        Create Team
+                      </Link>
+                    </Button>
+                  )}
                 </div>
 
                 {/* Step 2: Invite Athletic Trainers */}
-                <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4 opacity-60">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-sm font-medium">
-                    2
+                <div className={`flex items-center gap-3 rounded-lg border bg-white p-4 ${!hasTeams ? "opacity-60" : ""} ${hasStaff ? "border-green-200" : "border-slate-200"}`}>
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${hasStaff ? "bg-green-500 text-white" : hasTeams ? "bg-primary text-white" : "bg-slate-200 text-slate-500"}`}>
+                    {hasStaff ? <CheckCircle className="h-4 w-4" /> : "2"}
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-slate-900">Invite athletic trainers</p>
                     <p className="text-sm text-muted-foreground">
-                      Add your ATs so they can manage athletes and injuries
+                      {hasStaff ? `${stats?.athleticTrainerCount} AT${(stats?.athleticTrainerCount ?? 0) > 1 ? "s" : ""} on staff` : "Add your ATs so they can manage athletes and injuries"}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm" disabled>
-                    <Plus className="mr-1 h-4 w-4" />
-                    Invite Staff
-                  </Button>
+                  {hasStaff ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/org/staff">
+                        Manage Staff
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button asChild variant={hasTeams ? "default" : "outline"} size="sm" disabled={!hasTeams}>
+                      <Link to="/org/staff/invite">
+                        <Plus className="mr-1 h-4 w-4" />
+                        Invite Staff
+                      </Link>
+                    </Button>
+                  )}
                 </div>
 
                 {/* Step 3: Add Athletes */}
-                <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4 opacity-60">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-500 text-sm font-medium">
-                    3
+                <div className={`flex items-center gap-3 rounded-lg border bg-white p-4 ${!hasTeams ? "opacity-60" : ""} ${hasAthletes ? "border-green-200" : "border-slate-200"}`}>
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${hasAthletes ? "bg-green-500 text-white" : hasTeams ? "bg-primary text-white" : "bg-slate-200 text-slate-500"}`}>
+                    {hasAthletes ? <CheckCircle className="h-4 w-4" /> : "3"}
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-slate-900">Add athletes to your team</p>
                     <p className="text-sm text-muted-foreground">
-                      Import your roster or add athletes manually
+                      {hasAthletes ? `${stats?.athleteCount} athlete${(stats?.athleteCount ?? 0) > 1 ? "s" : ""} on roster` : "Import your roster or add athletes manually"}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm" disabled>
-                    <Plus className="mr-1 h-4 w-4" />
-                    Add Athletes
-                  </Button>
+                  {hasAthletes ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/org/teams">
+                        View Rosters
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      asChild
+                      variant={hasTeams ? "default" : "outline"}
+                      size="sm"
+                      disabled={!hasTeams}
+                    >
+                      <Link to={firstTeamId ? `/org/teams/${firstTeamId}/athletes` : "/org/teams"}>
+                        <Plus className="mr-1 h-4 w-4" />
+                        Add Athletes
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -167,8 +208,8 @@ export default function OrganizationDashboard() {
         </div>
       </div>
 
-      {/* Quick Actions - Show when not in onboarding */}
-      {!needsOnboarding && (
+      {/* Quick Actions - Show when onboarding is complete */}
+      {onboardingComplete && (
         <div className="mt-8">
           <h2 className="font-heading text-lg font-semibold text-slate-900 mb-4">
             Quick Actions

@@ -15,6 +15,9 @@ import OrganizationDashboardLayout from "./components/dashboard/OrganizationDash
 import Dashboard from "./pages/dashboard/Dashboard";
 import OrganizationDashboard from "./pages/dashboard/OrganizationDashboard";
 import Staff from "./pages/dashboard/Staff";
+import InviteStaff from "./pages/dashboard/InviteStaff";
+import Teams from "./pages/dashboard/Teams";
+import Athletes from "./pages/dashboard/Athletes";
 import NewSession from "./pages/dashboard/NewSession";
 import Patients from "./pages/dashboard/Patients";
 import ErrorPage from "./pages/Error";
@@ -111,8 +114,20 @@ export const router = createBrowserRouter([
                 element: <OrganizationDashboard />,
               },
               {
+                path: "teams",
+                element: <Teams />,
+              },
+              {
+                path: "teams/:teamId/athletes",
+                element: <Athletes />,
+              },
+              {
                 path: "staff",
                 element: <Staff />,
+              },
+              {
+                path: "staff/invite",
+                element: <InviteStaff />,
               },
             ],
           },
