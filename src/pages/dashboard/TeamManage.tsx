@@ -23,6 +23,9 @@ import {
   Mail,
   Calendar,
   Stethoscope,
+  ChevronDown,
+  TrendingUp,
+  FileText,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -71,6 +74,13 @@ export default function TeamManage() {
     teamId ? { teamId: teamId as Id<"teams"> } : "skip"
   );
   const organization = useQuery(api.organizations.getCurrent);
+
+  // Season overview state
+  const [selectedSeason, setSelectedSeason] = useState<string | undefined>(undefined);
+  const seasonOverview = useQuery(
+    api.teams.getSeasonOverview,
+    teamId ? { teamId: teamId as Id<"teams">, seasonYear: selectedSeason } : "skip"
+  );
 
   const updateTeam = useMutation(api.teams.update);
   const regenerateCode = useMutation(api.teams.regenerateInviteCode);
@@ -470,6 +480,151 @@ If you have any questions, please contact your athletic training staff.
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Season Overview */}
+          <div className="rounded-lg border border-slate-200 bg-white">
+            <div className="border-b border-slate-200 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-slate-600" />
+                  <h2 className="font-heading text-lg font-semibold text-slate-900">
+                    Season Overview
+                  </h2>
+                </div>
+                {seasonOverview && seasonOverview.availableSeasons.length > 0 && (
+                  <div className="relative">
+                    <select
+                      value={selectedSeason || seasonOverview.seasonYear}
+                      onChange={(e) => setSelectedSeason(e.target.value)}
+                      className="appearance-none rounded-lg border border-slate-200 bg-white px-3 py-1.5 pr-8 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      {seasonOverview.availableSeasons.map((season) => (
+                        <option key={season} value={season}>
+                          {season.replace("-", "' - '")} Season
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="p-6">
+              {!seasonOverview ? (
+                <div className="text-center py-8">
+                  <FileText className="mx-auto h-8 w-8 text-slate-300" />
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    No season data available yet
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Season Date Range */}
+                  <div className="text-center pb-4 border-b border-slate-100">
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(seasonOverview.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {" - "}
+                      {new Date(seasonOverview.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  </div>
+
+                  {/* Injury Summary */}
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-700 mb-3">Injury Summary</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-slate-50 p-3">
+                        <p className="text-xs text-muted-foreground">Total Injuries</p>
+                        <p className="text-xl font-semibold">{seasonOverview.totalInjuries}</p>
+                      </div>
+                      <div className="rounded-lg bg-green-50 p-3">
+                        <p className="text-xs text-green-700">Resolved</p>
+                        <p className="text-xl font-semibold text-green-800">{seasonOverview.resolvedInjuries}</p>
+                      </div>
+                      <div className="rounded-lg bg-amber-50 p-3">
+                        <p className="text-xs text-amber-700">Active</p>
+                        <p className="text-xl font-semibold text-amber-800">{seasonOverview.activeInjuries}</p>
+                      </div>
+                      <div className="rounded-lg bg-blue-50 p-3">
+                        <p className="text-xs text-blue-700">Avg Recovery</p>
+                        <p className="text-xl font-semibold text-blue-800">
+                          {seasonOverview.avgRecoveryDays !== undefined ? `${seasonOverview.avgRecoveryDays}d` : "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Injuries by Body Region */}
+                  {seasonOverview.injuriesByRegion.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-700 mb-3">Injuries by Body Region</h4>
+                      <div className="space-y-2">
+                        {seasonOverview.injuriesByRegion.map((item) => (
+                          <div key={item.region} className="flex items-center justify-between">
+                            <span className="text-sm text-slate-600 capitalize">{item.region.replace("_", " ")}</span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary rounded-full"
+                                  style={{ width: `${(item.count / seasonOverview.totalInjuries) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium w-6 text-right">{item.count}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Encounter Stats */}
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-700 mb-3">Encounter Activity</h4>
+                    <div className="rounded-lg bg-slate-50 p-3 mb-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Total Encounters</span>
+                        <span className="text-lg font-semibold">{seasonOverview.totalEncounters}</span>
+                      </div>
+                    </div>
+                    {seasonOverview.encountersByType.length > 0 && (
+                      <div className="space-y-2">
+                        {seasonOverview.encountersByType.map((item) => (
+                          <div key={item.type} className="flex items-center justify-between text-sm">
+                            <span className="text-slate-600 capitalize">{item.type.replace("_", " ")}</span>
+                            <span className="font-medium">{item.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Time Lost */}
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-700 mb-3">Time Lost</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg bg-amber-50 p-3">
+                        <p className="text-xs text-amber-700">Days Limited</p>
+                        <p className="text-xl font-semibold text-amber-800">{seasonOverview.totalDaysLimited}</p>
+                      </div>
+                      <div className="rounded-lg bg-red-50 p-3">
+                        <p className="text-xs text-red-700">Days Out</p>
+                        <p className="text-xl font-semibold text-red-800">{seasonOverview.totalDaysOut}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Athlete Stats */}
+                  <div className="pt-4 border-t border-slate-100">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Athletes with Injuries</span>
+                      <span className="font-medium">
+                        {seasonOverview.athletesWithInjuries} / {seasonOverview.totalAthletes}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

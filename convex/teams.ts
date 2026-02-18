@@ -394,6 +394,240 @@ export const getDetailedStats = query({
   },
 });
 
+/**
+ * Get season overview stats for a team
+ * Shows historical data organized by academic year (e.g., "24-25", "25-26")
+ */
+export const getSeasonOverview = query({
+  args: {
+    teamId: v.id("teams"),
+    seasonYear: v.optional(v.string()), // e.g., "24-25" - if not provided, returns current season
+  },
+  returns: v.union(
+    v.object({
+      seasonYear: v.string(),
+      seasonLabel: v.string(),
+      startDate: v.string(),
+      endDate: v.string(),
+      // Injury stats
+      totalInjuries: v.number(),
+      resolvedInjuries: v.number(),
+      activeInjuries: v.number(),
+      avgRecoveryDays: v.optional(v.number()),
+      // Injury breakdown by body region
+      injuriesByRegion: v.array(
+        v.object({
+          region: v.string(),
+          count: v.number(),
+        })
+      ),
+      // Encounter stats
+      totalEncounters: v.number(),
+      encountersByType: v.array(
+        v.object({
+          type: v.string(),
+          count: v.number(),
+        })
+      ),
+      // Athlete stats
+      totalAthletes: v.number(),
+      athletesWithInjuries: v.number(),
+      // Time lost
+      totalDaysLimited: v.number(),
+      totalDaysOut: v.number(),
+      // Available seasons for dropdown
+      availableSeasons: v.array(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const auth = await requireAuth(ctx);
+
+    const team = await verifyTeamInOrg(ctx, auth, args.teamId);
+    if (!team) return null;
+
+    // Calculate season dates
+    // Academic year runs August 1 - July 31
+    const now_date = new Date();
+    const currentYear = now_date.getFullYear();
+    const currentMonth = now_date.getMonth();
+
+    // Determine current academic year
+    let seasonStartYear: number;
+    if (currentMonth >= 7) {
+      // August or later = new academic year
+      seasonStartYear = currentYear;
+    } else {
+      // Before August = previous academic year
+      seasonStartYear = currentYear - 1;
+    }
+
+    // Parse requested season or use current
+    let targetStartYear = seasonStartYear;
+    if (args.seasonYear) {
+      const parts = args.seasonYear.split("-");
+      if (parts.length === 2) {
+        targetStartYear = 2000 + parseInt(parts[0]);
+      }
+    }
+
+    const seasonStart = new Date(targetStartYear, 7, 1); // August 1
+    const seasonEnd = new Date(targetStartYear + 1, 6, 31, 23, 59, 59); // July 31
+
+    const seasonYear = `${String(targetStartYear).slice(-2)}-${String(targetStartYear + 1).slice(-2)}`;
+    const seasonLabel = `${targetStartYear}-${targetStartYear + 1} Season`;
+
+    // Get all athletes on this team
+    const athletes = await ctx.db
+      .query("athletes")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+
+    const activeAthletes = athletes.filter((a) => !a.isDeleted);
+
+    // Get all injuries for this team's athletes within the season
+    const allInjuries: {
+      _id: string;
+      athleteId: string;
+      bodyRegion: string;
+      injuryDate: string;
+      resolvedDate?: string;
+      status: string;
+      rtpStatus: string;
+    }[] = [];
+
+    for (const athlete of activeAthletes) {
+      const injuries = await ctx.db
+        .query("injuries")
+        .withIndex("by_athleteId", (q) => q.eq("athleteId", athlete._id))
+        .collect();
+
+      for (const injury of injuries) {
+        if (injury.isDeleted) continue;
+
+        const injuryDate = new Date(injury.injuryDate);
+        if (injuryDate >= seasonStart && injuryDate <= seasonEnd) {
+          allInjuries.push({
+            _id: injury._id,
+            athleteId: injury.athleteId,
+            bodyRegion: injury.bodyRegion,
+            injuryDate: injury.injuryDate,
+            resolvedDate: injury.resolvedDate,
+            status: injury.status,
+            rtpStatus: injury.rtpStatus,
+          });
+        }
+      }
+    }
+
+    // Calculate injury stats
+    const totalInjuries = allInjuries.length;
+    const resolvedInjuries = allInjuries.filter((i) => i.status === "resolved").length;
+    const activeInjuries = allInjuries.filter((i) => i.status === "active").length;
+
+    // Calculate average recovery days for resolved injuries
+    let avgRecoveryDays: number | undefined;
+    const recoveryDays: number[] = [];
+    for (const injury of allInjuries.filter((i) => i.status === "resolved" && i.resolvedDate)) {
+      const start = new Date(injury.injuryDate);
+      const end = new Date(injury.resolvedDate!);
+      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      if (days > 0) recoveryDays.push(days);
+    }
+    if (recoveryDays.length > 0) {
+      avgRecoveryDays = Math.round(recoveryDays.reduce((a, b) => a + b, 0) / recoveryDays.length);
+    }
+
+    // Group injuries by body region
+    const regionCounts: Record<string, number> = {};
+    for (const injury of allInjuries) {
+      regionCounts[injury.bodyRegion] = (regionCounts[injury.bodyRegion] || 0) + 1;
+    }
+    const injuriesByRegion = Object.entries(regionCounts)
+      .map(([region, count]) => ({ region, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Get encounters for this season
+    const allEncounters: { type: string }[] = [];
+    for (const athlete of activeAthletes) {
+      const encounters = await ctx.db
+        .query("encounters")
+        .withIndex("by_athleteId", (q) => q.eq("athleteId", athlete._id))
+        .collect();
+
+      for (const encounter of encounters) {
+        if (encounter.isDeleted) continue;
+
+        const encounterDate = new Date(encounter.encounterDatetime);
+        if (encounterDate >= seasonStart && encounterDate <= seasonEnd) {
+          allEncounters.push({ type: encounter.encounterType });
+        }
+      }
+    }
+
+    const totalEncounters = allEncounters.length;
+
+    // Group encounters by type
+    const typeCounts: Record<string, number> = {};
+    for (const encounter of allEncounters) {
+      typeCounts[encounter.type] = (typeCounts[encounter.type] || 0) + 1;
+    }
+    const encountersByType = Object.entries(typeCounts)
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Count athletes with injuries this season
+    const athletesWithInjuriesSet = new Set(allInjuries.map((i) => i.athleteId));
+    const athletesWithInjuries = athletesWithInjuriesSet.size;
+
+    // Calculate total days limited/out (simplified estimation)
+    // This counts injuries and their RTP status
+    let totalDaysLimited = 0;
+    let totalDaysOut = 0;
+    for (const injury of allInjuries) {
+      const start = new Date(injury.injuryDate);
+      const end = injury.resolvedDate ? new Date(injury.resolvedDate) : now_date;
+      const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+
+      if (injury.rtpStatus === "out") {
+        totalDaysOut += days;
+      } else if (injury.rtpStatus === "limited") {
+        totalDaysLimited += days;
+      }
+    }
+
+    // Determine available seasons (from team creation to current)
+    const teamCreated = new Date(team.createdAt);
+    let createdYear = teamCreated.getFullYear();
+    if (teamCreated.getMonth() < 7) createdYear--; // Before August
+
+    const availableSeasons: string[] = [];
+    for (let year = createdYear; year <= seasonStartYear; year++) {
+      availableSeasons.push(`${String(year).slice(-2)}-${String(year + 1).slice(-2)}`);
+    }
+    availableSeasons.reverse(); // Most recent first
+
+    return {
+      seasonYear,
+      seasonLabel,
+      startDate: seasonStart.toISOString().split("T")[0],
+      endDate: seasonEnd.toISOString().split("T")[0],
+      totalInjuries,
+      resolvedInjuries,
+      activeInjuries,
+      avgRecoveryDays,
+      injuriesByRegion,
+      totalEncounters,
+      encountersByType,
+      totalAthletes: activeAthletes.length,
+      athletesWithInjuries,
+      totalDaysLimited,
+      totalDaysOut,
+      availableSeasons,
+    };
+  },
+});
+
 // =============================================================================
 // Mutations
 // =============================================================================
