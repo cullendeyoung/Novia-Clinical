@@ -257,9 +257,8 @@ function TeamCard({
   orgName: string;
 }) {
   const stats = useQuery(api.teams.getStats, { teamId: team._id });
-  const [copiedEmail, setCopiedEmail] = useState(false);
 
-  const generateInviteEmail = () => {
+  const openEmailClient = () => {
     const registrationUrl = `${window.location.origin}/register/athlete?code=${team.inviteCode}`;
 
     const subject = `Join ${team.name} on Novia - Athletic Training Platform`;
@@ -285,21 +284,6 @@ If you have any questions, please contact your athletic training staff.
 
 - ${orgName} Athletic Training`;
 
-    return { subject, body };
-  };
-
-  const copyInviteEmail = async () => {
-    const { subject, body } = generateInviteEmail();
-    const fullEmail = `Subject: ${subject}\n\n${body}`;
-
-    await navigator.clipboard.writeText(fullEmail);
-    setCopiedEmail(true);
-    toast.success("Invite email copied! Paste into your email client.");
-    setTimeout(() => setCopiedEmail(false), 3000);
-  };
-
-  const openEmailClient = () => {
-    const { subject, body } = generateInviteEmail();
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailtoUrl, "_blank");
   };
@@ -360,35 +344,15 @@ If you have any questions, please contact your athletic training staff.
             )}
           </Button>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 text-xs"
-            onClick={copyInviteEmail}
-          >
-            {copiedEmail ? (
-              <>
-                <Check className="mr-1 h-3 w-3 text-green-600" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="mr-1 h-3 w-3" />
-                Copy Invite Email
-              </>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 text-xs"
-            onClick={openEmailClient}
-          >
-            <Mail className="mr-1 h-3 w-3" />
-            Open in Email
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-xs"
+          onClick={openEmailClient}
+        >
+          <Mail className="mr-1 h-3 w-3" />
+          Invite Through Email
+        </Button>
       </div>
 
       <div className="flex gap-2">
