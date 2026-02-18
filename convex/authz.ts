@@ -28,6 +28,7 @@ export type AuthContext = {
   authUserId: string;
   role: UserRole;
   teamIds: Id<"teams">[];
+  fullTimeTeamId: Id<"teams"> | null;
   email: string;
   fullName: string;
 };
@@ -79,6 +80,7 @@ export async function getAuthContext(
     authUserId: user.authUserId,
     role: user.role as UserRole,
     teamIds: user.teamIds,
+    fullTimeTeamId: user.fullTimeTeamId ?? null,
     email: user.email,
     fullName: user.fullName,
   };
@@ -267,7 +269,8 @@ export function requireOrgAdmin(auth: AuthContext): void {
 
 /**
  * Check if user has access to a specific team
- * Org admins have access to all teams, others need to be assigned
+ * Org admins and athletic trainers have access to all teams in their org
+ * Others need to be assigned to specific teams
  */
 export function hasTeamAccess(
   auth: AuthContext,
@@ -275,6 +278,9 @@ export function hasTeamAccess(
 ): boolean {
   if (auth.role === "org_admin") {
     return true; // Org admins can access all teams
+  }
+  if (auth.role === "athletic_trainer") {
+    return true; // ATs can access all teams in their organization
   }
   return auth.teamIds.includes(teamId);
 }
@@ -328,8 +334,9 @@ export async function verifyAthleteInOrg(
   if (athlete.orgId !== auth.orgId) {
     throw new Error("Access denied: Athlete belongs to another organization");
   }
-  // Also verify team access for non-admins
-  if (auth.role !== "org_admin") {
+  // ATs and org_admins have access to all teams in the org
+  // Others need specific team access
+  if (auth.role !== "org_admin" && auth.role !== "athletic_trainer") {
     requireTeamAccess(auth, athlete.teamId);
   }
   return athlete;

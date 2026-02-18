@@ -56,8 +56,9 @@ export const list = query({
       filteredTeams = teams.filter((t) => t.isActive);
     }
 
-    // Non-admins only see teams they have access to
-    if (auth.role !== "org_admin") {
+    // Org admins and ATs see all teams in the org
+    // Other roles only see teams they have access to
+    if (auth.role !== "org_admin" && auth.role !== "athletic_trainer") {
       filteredTeams = filteredTeams.filter((t) =>
         hasTeamAccess(auth, t._id)
       );
@@ -96,8 +97,8 @@ export const getById = query({
     // Verify team belongs to user's org
     if (team.orgId !== auth.orgId) return null;
 
-    // Check team access for non-admins
-    if (auth.role !== "org_admin" && !hasTeamAccess(auth, team._id)) {
+    // Check team access for non-admins and non-ATs
+    if (auth.role !== "org_admin" && auth.role !== "athletic_trainer" && !hasTeamAccess(auth, team._id)) {
       return null;
     }
 

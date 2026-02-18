@@ -118,8 +118,12 @@ export default defineSchema({
     email: v.string(),
     fullName: v.string(),
     role: roleValidator,
-    // For ATs/physicians: which teams they're assigned to
+    // For ATs/physicians: their "full-time" or default team assignment
+    // ATs can access ALL teams in the org but have one primary team
+    fullTimeTeamId: v.optional(v.id("teams")),
+    // Legacy field - kept for backward compatibility
     // For athletes: their team (single team)
+    // For ATs: no longer used for access control (they have org-wide access)
     teamIds: v.array(v.id("teams")),
     isActive: v.boolean(),
     lastLoginAt: v.optional(v.number()),

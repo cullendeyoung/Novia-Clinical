@@ -55,7 +55,8 @@ export const listByTeam = query({
 
     // Verify team access
     await verifyTeamInOrg(ctx, auth, args.teamId);
-    if (auth.role !== "org_admin" && !hasTeamAccess(auth, args.teamId)) {
+    // Org admins and ATs have access to all teams in the org
+    if (auth.role !== "org_admin" && auth.role !== "athletic_trainer" && !hasTeamAccess(auth, args.teamId)) {
       throw new Error("Access denied: You do not have access to this team");
     }
 
@@ -217,9 +218,10 @@ export const search = query({
     }
 
     // Filter by search term and team access
+    // Org admins and ATs have org-wide access to all athletes
     const filtered = athletes.filter((a) => {
       if (a.isDeleted || !a.isActive) return false;
-      if (auth.role !== "org_admin" && !hasTeamAccess(auth, a.teamId)) return false;
+      if (auth.role !== "org_admin" && auth.role !== "athletic_trainer" && !hasTeamAccess(auth, a.teamId)) return false;
 
       const fullName = `${a.firstName} ${a.lastName}`.toLowerCase();
       const reverseName = `${a.lastName} ${a.firstName}`.toLowerCase();
@@ -309,7 +311,8 @@ export const create = mutation({
 
     // Verify team access
     await verifyTeamInOrg(ctx, auth, args.teamId);
-    if (auth.role !== "org_admin" && !hasTeamAccess(auth, args.teamId)) {
+    // Org admins and ATs have access to all teams in the org
+    if (auth.role !== "org_admin" && auth.role !== "athletic_trainer" && !hasTeamAccess(auth, args.teamId)) {
       throw new Error("Access denied: You do not have access to this team");
     }
 

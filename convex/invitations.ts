@@ -372,6 +372,8 @@ export const accept = mutation({
     }
 
     // Create user account
+    // For ATs, the invited team becomes their full-time (default) team
+    // ATs have org-wide access but this is their primary assignment
     const userId = await ctx.db.insert("users", {
       orgId: invitation.orgId,
       authUserId: args.authUserId,
@@ -379,6 +381,7 @@ export const accept = mutation({
       fullName: args.fullName,
       role: invitation.role,
       teamIds: [invitation.teamId],
+      fullTimeTeamId: invitation.role === "athletic_trainer" ? invitation.teamId : undefined,
       isActive: true,
       createdAt: timestamp,
       updatedAt: timestamp,

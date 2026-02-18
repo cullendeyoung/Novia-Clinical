@@ -46,6 +46,7 @@ export const getCurrent = query({
       fullName: v.string(),
       role: roleValidator,
       teamIds: v.array(v.id("teams")),
+      fullTimeTeamId: v.optional(v.id("teams")),
       isActive: v.boolean(),
       lastLoginAt: v.optional(v.number()),
       createdAt: v.number(),
@@ -70,6 +71,7 @@ export const getCurrent = query({
       fullName: user.fullName,
       role: user.role,
       teamIds: user.teamIds,
+      fullTimeTeamId: user.fullTimeTeamId,
       isActive: user.isActive,
       lastLoginAt: user.lastLoginAt,
       createdAt: user.createdAt,
@@ -130,6 +132,7 @@ export const list = query({
       fullName: v.string(),
       role: roleValidator,
       teamIds: v.array(v.id("teams")),
+      fullTimeTeamId: v.optional(v.id("teams")),
       isActive: v.boolean(),
       lastLoginAt: v.optional(v.number()),
       createdAt: v.number(),
@@ -160,6 +163,7 @@ export const list = query({
           fullName: u.fullName,
           role: u.role,
           teamIds: u.teamIds,
+          fullTimeTeamId: u.fullTimeTeamId,
           isActive: u.isActive,
           lastLoginAt: u.lastLoginAt,
           createdAt: u.createdAt,
@@ -195,6 +199,7 @@ export const list = query({
         fullName: u.fullName,
         role: u.role,
         teamIds: u.teamIds,
+        fullTimeTeamId: u.fullTimeTeamId,
         isActive: u.isActive,
         lastLoginAt: u.lastLoginAt,
         createdAt: u.createdAt,
@@ -258,6 +263,7 @@ export const create = mutation({
     fullName: v.string(),
     role: roleValidator,
     teamIds: v.array(v.id("teams")),
+    fullTimeTeamId: v.optional(v.id("teams")),
   },
   returns: v.id("users"),
   handler: async (ctx, args) => {
@@ -285,6 +291,14 @@ export const create = mutation({
       }
     }
 
+    // Verify fullTimeTeamId belongs to the org if provided
+    if (args.fullTimeTeamId) {
+      const fullTimeTeam = await ctx.db.get(args.fullTimeTeamId);
+      if (!fullTimeTeam || fullTimeTeam.orgId !== args.orgId) {
+        throw new Error("Invalid full-time team");
+      }
+    }
+
     const timestamp = now();
 
     const userId = await ctx.db.insert("users", {
@@ -294,6 +308,7 @@ export const create = mutation({
       fullName: args.fullName,
       role: args.role,
       teamIds: args.teamIds,
+      fullTimeTeamId: args.fullTimeTeamId,
       isActive: true,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -327,6 +342,7 @@ export const update = mutation({
     userId: v.optional(v.id("users")), // If not provided, updates self
     fullName: v.optional(v.string()),
     teamIds: v.optional(v.array(v.id("teams"))), // Only org admin can change
+    fullTimeTeamId: v.optional(v.id("teams")), // Only org admin can change - AT's primary team
     role: v.optional(roleValidator), // Only org admin can change
     isActive: v.optional(v.boolean()), // Only org admin can change
   },
@@ -347,6 +363,7 @@ export const update = mutation({
     const updates: Partial<{
       fullName: string;
       teamIds: typeof args.teamIds;
+      fullTimeTeamId: typeof args.fullTimeTeamId;
       role: UserRole;
       isActive: boolean;
       updatedAt: number;
@@ -365,6 +382,11 @@ export const update = mutation({
           await verifyTeamInOrg(ctx, auth, teamId);
         }
         updates.teamIds = args.teamIds;
+      }
+      if (args.fullTimeTeamId !== undefined) {
+        // Verify the full-time team belongs to org
+        await verifyTeamInOrg(ctx, auth, args.fullTimeTeamId);
+        updates.fullTimeTeamId = args.fullTimeTeamId;
       }
       if (args.role !== undefined) {
         // Can't demote the last org admin

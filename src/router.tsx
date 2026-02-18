@@ -14,6 +14,7 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 import OrganizationDashboardLayout from "./components/dashboard/OrganizationDashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
 import OrganizationDashboard from "./pages/dashboard/OrganizationDashboard";
+import Staff from "./pages/dashboard/Staff";
 import NewSession from "./pages/dashboard/NewSession";
 import Patients from "./pages/dashboard/Patients";
 import ErrorPage from "./pages/Error";
@@ -103,6 +104,10 @@ export const router = createBrowserRouter([
               {
                 index: true,
                 element: <OrganizationDashboard />,
+              },
+              {
+                path: "staff",
+                element: <Staff />,
               },
             ],
           },
