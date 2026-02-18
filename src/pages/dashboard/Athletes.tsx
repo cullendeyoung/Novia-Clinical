@@ -65,7 +65,9 @@ export default function Athletes() {
   // Form state - Essential info (AT fills)
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [preferredName, setPreferredName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [jerseyNumber, setJerseyNumber] = useState("");
   const [position, setPosition] = useState("");
   const [classYear, setClassYear] = useState("");
@@ -76,24 +78,90 @@ export default function Athletes() {
   const [heightFeet, setHeightFeet] = useState("");
   const [heightInches, setHeightInches] = useState("");
   const [weight, setWeight] = useState("");
+  const [dominantHand, setDominantHand] = useState("");
+
+  // Address
+  const [addressStreet, setAddressStreet] = useState("");
+  const [addressCity, setAddressCity] = useState("");
+  const [addressState, setAddressState] = useState("");
+  const [addressZip, setAddressZip] = useState("");
+
+  // Emergency Contacts
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
+  const [emergencyContactRelationship, setEmergencyContactRelationship] = useState("");
+  const [emergencyContact2Name, setEmergencyContact2Name] = useState("");
+  const [emergencyContact2Phone, setEmergencyContact2Phone] = useState("");
+  const [emergencyContact2Relationship, setEmergencyContact2Relationship] = useState("");
+
+  // Medical History
+  const [allergies, setAllergies] = useState("");
+  const [medications, setMedications] = useState("");
+  const [medicalConditions, setMedicalConditions] = useState("");
+  const [previousSurgeries, setPreviousSurgeries] = useState("");
+  const [previousInjuries, setPreviousInjuries] = useState("");
+
+  // Insurance
+  const [insuranceProvider, setInsuranceProvider] = useState("");
+  const [insurancePolicyNumber, setInsurancePolicyNumber] = useState("");
+  const [insuranceGroupNumber, setInsuranceGroupNumber] = useState("");
+  const [insurancePhone, setInsurancePhone] = useState("");
+  const [policyHolderName, setPolicyHolderName] = useState("");
+  const [policyHolderRelationship, setPolicyHolderRelationship] = useState("");
+
+  // Primary Care
+  const [primaryPhysicianName, setPrimaryPhysicianName] = useState("");
+  const [primaryPhysicianPhone, setPrimaryPhysicianPhone] = useState("");
+
+  // Notes
   const [notes, setNotes] = useState("");
 
   const resetForm = () => {
+    // Essential
     setFirstName("");
     setLastName("");
+    setPreferredName("");
     setEmail("");
+    setPhone("");
     setJerseyNumber("");
     setPosition("");
     setClassYear("");
     setSex("");
     setDateOfBirth("");
+    // Physical
     setHeightFeet("");
     setHeightInches("");
     setWeight("");
+    setDominantHand("");
+    // Address
+    setAddressStreet("");
+    setAddressCity("");
+    setAddressState("");
+    setAddressZip("");
+    // Emergency Contacts
     setEmergencyContactName("");
     setEmergencyContactPhone("");
+    setEmergencyContactRelationship("");
+    setEmergencyContact2Name("");
+    setEmergencyContact2Phone("");
+    setEmergencyContact2Relationship("");
+    // Medical
+    setAllergies("");
+    setMedications("");
+    setMedicalConditions("");
+    setPreviousSurgeries("");
+    setPreviousInjuries("");
+    // Insurance
+    setInsuranceProvider("");
+    setInsurancePolicyNumber("");
+    setInsuranceGroupNumber("");
+    setInsurancePhone("");
+    setPolicyHolderName("");
+    setPolicyHolderRelationship("");
+    // Primary Care
+    setPrimaryPhysicianName("");
+    setPrimaryPhysicianPhone("");
+    // Notes
     setNotes("");
     setShowAdditionalInfo(false);
   };
@@ -126,18 +194,50 @@ export default function Athletes() {
     try {
       await createAthlete({
         teamId: teamId as Id<"teams">,
+        // Basic Info
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        preferredName: preferredName.trim() || undefined,
         email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        dateOfBirth: dateOfBirth || undefined,
+        sex: sex as "M" | "F" | "Other" | undefined,
+        // Athletic Info
+        classYear: classYear || undefined,
         jerseyNumber: jerseyNumber || undefined,
         position: position || undefined,
-        classYear: classYear || undefined,
-        sex: sex as "M" | "F" | "Other" | undefined,
-        dateOfBirth: dateOfBirth || undefined,
         heightInches: totalHeightInches,
         weightLbs: weight ? parseInt(weight) : undefined,
+        dominantHand: dominantHand as "Left" | "Right" | "Ambidextrous" | undefined,
+        // Address
+        addressStreet: addressStreet.trim() || undefined,
+        addressCity: addressCity.trim() || undefined,
+        addressState: addressState.trim() || undefined,
+        addressZip: addressZip.trim() || undefined,
+        // Emergency Contacts
         emergencyContactName: emergencyContactName.trim() || undefined,
         emergencyContactPhone: emergencyContactPhone.trim() || undefined,
+        emergencyContactRelationship: emergencyContactRelationship.trim() || undefined,
+        emergencyContact2Name: emergencyContact2Name.trim() || undefined,
+        emergencyContact2Phone: emergencyContact2Phone.trim() || undefined,
+        emergencyContact2Relationship: emergencyContact2Relationship.trim() || undefined,
+        // Medical History
+        allergies: allergies.trim() || undefined,
+        medications: medications.trim() || undefined,
+        medicalConditions: medicalConditions.trim() || undefined,
+        previousSurgeries: previousSurgeries.trim() || undefined,
+        previousInjuries: previousInjuries.trim() || undefined,
+        // Insurance
+        insuranceProvider: insuranceProvider.trim() || undefined,
+        insurancePolicyNumber: insurancePolicyNumber.trim() || undefined,
+        insuranceGroupNumber: insuranceGroupNumber.trim() || undefined,
+        insurancePhone: insurancePhone.trim() || undefined,
+        policyHolderName: policyHolderName.trim() || undefined,
+        policyHolderRelationship: policyHolderRelationship.trim() || undefined,
+        // Primary Care
+        primaryPhysicianName: primaryPhysicianName.trim() || undefined,
+        primaryPhysicianPhone: primaryPhysicianPhone.trim() || undefined,
+        // Notes
         notes: notes.trim() || undefined,
         sendInvite: !!email.trim(),
       });
@@ -434,7 +534,7 @@ ${orgName} Athletic Training`;
               <button
                 type="button"
                 onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
-                className="flex w-full items-center justify-between text-left"
+                className="flex w-full items-center justify-between text-left py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 <div>
                   <span className="font-medium text-slate-700">
@@ -452,12 +552,14 @@ ${orgName} Athletic Training`;
               </button>
 
               {showAdditionalInfo && (
-                <div className="mt-4 space-y-4 rounded-lg bg-slate-50 p-4">
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div>
-                      <Label>Height</Label>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
+                <div className="mt-4 space-y-6 rounded-lg bg-slate-50 p-4">
+                  {/* Physical Information */}
+                  <div>
+                    <h4 className="font-medium text-slate-800 mb-3">Physical Information</h4>
+                    <div className="grid gap-4 md:grid-cols-4">
+                      <div>
+                        <Label>Height</Label>
+                        <div className="flex gap-2">
                           <Input
                             type="number"
                             min="0"
@@ -466,8 +568,6 @@ ${orgName} Athletic Training`;
                             onChange={(e) => setHeightFeet(e.target.value)}
                             placeholder="Ft"
                           />
-                        </div>
-                        <div className="flex-1">
                           <Input
                             type="number"
                             min="0"
@@ -478,48 +578,309 @@ ${orgName} Athletic Training`;
                           />
                         </div>
                       </div>
+                      <div>
+                        <Label htmlFor="weight">Weight (lbs)</Label>
+                        <Input
+                          id="weight"
+                          type="number"
+                          min="0"
+                          value={weight}
+                          onChange={(e) => setWeight(e.target.value)}
+                          placeholder="180"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="dominantHand">Dominant Hand</Label>
+                        <Select
+                          value={dominantHand}
+                          onChange={(e) => setDominantHand(e.target.value)}
+                          options={[
+                            { value: "Right", label: "Right" },
+                            { value: "Left", label: "Left" },
+                            { value: "Ambidextrous", label: "Ambidextrous" },
+                          ]}
+                          placeholder="Select"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="(555) 123-4567"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="weight">Weight (lbs)</Label>
-                      <Input
-                        id="weight"
-                        type="number"
-                        min="0"
-                        value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                        placeholder="180"
-                      />
-                    </div>
-                    <div className="md:col-span-1" />
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label htmlFor="emergencyContactName">Emergency Contact Name</Label>
-                      <Input
-                        id="emergencyContactName"
-                        value={emergencyContactName}
-                        onChange={(e) => setEmergencyContactName(e.target.value)}
-                        placeholder="Jane Smith"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="emergencyContactPhone">Emergency Contact Phone</Label>
-                      <Input
-                        id="emergencyContactPhone"
-                        type="tel"
-                        value={emergencyContactPhone}
-                        onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                        placeholder="(555) 123-4567"
-                      />
-                    </div>
-                  </div>
+
+                  {/* Home Address */}
                   <div>
-                    <Label htmlFor="notes">Notes</Label>
+                    <h4 className="font-medium text-slate-800 mb-3">Home Address</h4>
+                    <div className="grid gap-4 md:grid-cols-4">
+                      <div className="md:col-span-2">
+                        <Label htmlFor="addressStreet">Street Address</Label>
+                        <Input
+                          id="addressStreet"
+                          value={addressStreet}
+                          onChange={(e) => setAddressStreet(e.target.value)}
+                          placeholder="123 Main St"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="addressCity">City</Label>
+                        <Input
+                          id="addressCity"
+                          value={addressCity}
+                          onChange={(e) => setAddressCity(e.target.value)}
+                          placeholder="City"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor="addressState">State</Label>
+                          <Input
+                            id="addressState"
+                            value={addressState}
+                            onChange={(e) => setAddressState(e.target.value)}
+                            placeholder="ST"
+                            maxLength={2}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="addressZip">ZIP</Label>
+                          <Input
+                            id="addressZip"
+                            value={addressZip}
+                            onChange={(e) => setAddressZip(e.target.value)}
+                            placeholder="12345"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Emergency Contacts */}
+                  <div>
+                    <h4 className="font-medium text-slate-800 mb-3">Emergency Contacts</h4>
+                    <div className="space-y-4">
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div>
+                          <Label htmlFor="emergencyContactName">Contact 1 Name</Label>
+                          <Input
+                            id="emergencyContactName"
+                            value={emergencyContactName}
+                            onChange={(e) => setEmergencyContactName(e.target.value)}
+                            placeholder="Jane Smith"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="emergencyContactPhone">Contact 1 Phone</Label>
+                          <Input
+                            id="emergencyContactPhone"
+                            type="tel"
+                            value={emergencyContactPhone}
+                            onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                            placeholder="(555) 123-4567"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="emergencyContactRelationship">Relationship</Label>
+                          <Input
+                            id="emergencyContactRelationship"
+                            value={emergencyContactRelationship}
+                            onChange={(e) => setEmergencyContactRelationship(e.target.value)}
+                            placeholder="Mother"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div>
+                          <Label htmlFor="emergencyContact2Name">Contact 2 Name</Label>
+                          <Input
+                            id="emergencyContact2Name"
+                            value={emergencyContact2Name}
+                            onChange={(e) => setEmergencyContact2Name(e.target.value)}
+                            placeholder="John Smith"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="emergencyContact2Phone">Contact 2 Phone</Label>
+                          <Input
+                            id="emergencyContact2Phone"
+                            type="tel"
+                            value={emergencyContact2Phone}
+                            onChange={(e) => setEmergencyContact2Phone(e.target.value)}
+                            placeholder="(555) 987-6543"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="emergencyContact2Relationship">Relationship</Label>
+                          <Input
+                            id="emergencyContact2Relationship"
+                            value={emergencyContact2Relationship}
+                            onChange={(e) => setEmergencyContact2Relationship(e.target.value)}
+                            placeholder="Father"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Medical History */}
+                  <div>
+                    <h4 className="font-medium text-slate-800 mb-3">Medical History</h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label htmlFor="allergies">Allergies</Label>
+                        <textarea
+                          id="allergies"
+                          value={allergies}
+                          onChange={(e) => setAllergies(e.target.value)}
+                          placeholder="List any allergies (medications, food, environmental)..."
+                          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-h-[60px]"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="medications">Current Medications</Label>
+                        <textarea
+                          id="medications"
+                          value={medications}
+                          onChange={(e) => setMedications(e.target.value)}
+                          placeholder="List current medications and dosages..."
+                          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-h-[60px]"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="medicalConditions">Medical Conditions</Label>
+                        <textarea
+                          id="medicalConditions"
+                          value={medicalConditions}
+                          onChange={(e) => setMedicalConditions(e.target.value)}
+                          placeholder="Asthma, diabetes, heart conditions, etc..."
+                          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-h-[60px]"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="previousSurgeries">Previous Surgeries</Label>
+                        <textarea
+                          id="previousSurgeries"
+                          value={previousSurgeries}
+                          onChange={(e) => setPreviousSurgeries(e.target.value)}
+                          placeholder="List any prior surgeries and dates..."
+                          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-h-[60px]"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="previousInjuries">Previous Injuries (prior to joining team)</Label>
+                        <textarea
+                          id="previousInjuries"
+                          value={previousInjuries}
+                          onChange={(e) => setPreviousInjuries(e.target.value)}
+                          placeholder="List any previous injuries, fractures, concussions, etc..."
+                          className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-h-[60px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Insurance Information */}
+                  <div>
+                    <h4 className="font-medium text-slate-800 mb-3">Insurance Information</h4>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div>
+                        <Label htmlFor="insuranceProvider">Insurance Provider</Label>
+                        <Input
+                          id="insuranceProvider"
+                          value={insuranceProvider}
+                          onChange={(e) => setInsuranceProvider(e.target.value)}
+                          placeholder="Blue Cross Blue Shield"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="insurancePolicyNumber">Policy Number</Label>
+                        <Input
+                          id="insurancePolicyNumber"
+                          value={insurancePolicyNumber}
+                          onChange={(e) => setInsurancePolicyNumber(e.target.value)}
+                          placeholder="ABC123456789"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="insuranceGroupNumber">Group Number</Label>
+                        <Input
+                          id="insuranceGroupNumber"
+                          value={insuranceGroupNumber}
+                          onChange={(e) => setInsuranceGroupNumber(e.target.value)}
+                          placeholder="GRP001"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="insurancePhone">Insurance Phone</Label>
+                        <Input
+                          id="insurancePhone"
+                          type="tel"
+                          value={insurancePhone}
+                          onChange={(e) => setInsurancePhone(e.target.value)}
+                          placeholder="(800) 555-1234"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="policyHolderName">Policy Holder Name</Label>
+                        <Input
+                          id="policyHolderName"
+                          value={policyHolderName}
+                          onChange={(e) => setPolicyHolderName(e.target.value)}
+                          placeholder="Jane Smith"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="policyHolderRelationship">Relationship to Athlete</Label>
+                        <Input
+                          id="policyHolderRelationship"
+                          value={policyHolderRelationship}
+                          onChange={(e) => setPolicyHolderRelationship(e.target.value)}
+                          placeholder="Mother"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Primary Care Physician */}
+                  <div>
+                    <h4 className="font-medium text-slate-800 mb-3">Primary Care Physician</h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <Label htmlFor="primaryPhysicianName">Physician Name</Label>
+                        <Input
+                          id="primaryPhysicianName"
+                          value={primaryPhysicianName}
+                          onChange={(e) => setPrimaryPhysicianName(e.target.value)}
+                          placeholder="Dr. John Doe"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="primaryPhysicianPhone">Physician Phone</Label>
+                        <Input
+                          id="primaryPhysicianPhone"
+                          type="tel"
+                          value={primaryPhysicianPhone}
+                          onChange={(e) => setPrimaryPhysicianPhone(e.target.value)}
+                          placeholder="(555) 123-4567"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <h4 className="font-medium text-slate-800 mb-3">Additional Notes</h4>
                     <textarea
                       id="notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Any relevant notes about the athlete..."
+                      placeholder="Any other relevant information about the athlete..."
                       className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-h-[80px]"
                     />
                   </div>

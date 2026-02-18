@@ -291,26 +291,65 @@ export const getCount = query({
 // Mutations
 // =============================================================================
 
+// Dominant hand validator
+const dominantHandValidator = v.union(
+  v.literal("Left"),
+  v.literal("Right"),
+  v.literal("Ambidextrous")
+);
+
 /**
  * Create a new athlete (AT adds to roster)
  */
 export const create = mutation({
   args: {
     teamId: v.id("teams"),
+    // Basic Info
     firstName: v.string(),
     lastName: v.string(),
+    preferredName: v.optional(v.string()),
     email: v.optional(v.string()),
+    phone: v.optional(v.string()),
     dateOfBirth: v.optional(v.string()),
     sex: v.optional(sexValidator),
+    // Athletic Info
     classYear: v.optional(v.string()),
     jerseyNumber: v.optional(v.string()),
     position: v.optional(v.string()),
     heightInches: v.optional(v.number()),
     weightLbs: v.optional(v.number()),
-    notes: v.optional(v.string()),
+    dominantHand: v.optional(dominantHandValidator),
+    // Address
+    addressStreet: v.optional(v.string()),
+    addressCity: v.optional(v.string()),
+    addressState: v.optional(v.string()),
+    addressZip: v.optional(v.string()),
+    // Emergency Contacts
     emergencyContactName: v.optional(v.string()),
     emergencyContactPhone: v.optional(v.string()),
-    sendInvite: v.optional(v.boolean()), // Whether to send profile completion invite
+    emergencyContactRelationship: v.optional(v.string()),
+    emergencyContact2Name: v.optional(v.string()),
+    emergencyContact2Phone: v.optional(v.string()),
+    emergencyContact2Relationship: v.optional(v.string()),
+    // Medical History
+    allergies: v.optional(v.string()),
+    medications: v.optional(v.string()),
+    medicalConditions: v.optional(v.string()),
+    previousSurgeries: v.optional(v.string()),
+    previousInjuries: v.optional(v.string()),
+    // Insurance
+    insuranceProvider: v.optional(v.string()),
+    insurancePolicyNumber: v.optional(v.string()),
+    insuranceGroupNumber: v.optional(v.string()),
+    insurancePhone: v.optional(v.string()),
+    policyHolderName: v.optional(v.string()),
+    policyHolderRelationship: v.optional(v.string()),
+    // Primary Care
+    primaryPhysicianName: v.optional(v.string()),
+    primaryPhysicianPhone: v.optional(v.string()),
+    // Notes
+    notes: v.optional(v.string()),
+    sendInvite: v.optional(v.boolean()),
   },
   returns: v.id("athletes"),
   handler: async (ctx, args) => {
@@ -329,19 +368,51 @@ export const create = mutation({
     const athleteId = await ctx.db.insert("athletes", {
       orgId: auth.orgId,
       teamId: args.teamId,
+      // Basic Info
       firstName: args.firstName,
       lastName: args.lastName,
+      preferredName: args.preferredName,
       email: args.email,
+      phone: args.phone,
       dateOfBirth: args.dateOfBirth,
       sex: args.sex,
+      // Athletic Info
       classYear: args.classYear,
       jerseyNumber: args.jerseyNumber,
       position: args.position,
       heightInches: args.heightInches,
       weightLbs: args.weightLbs,
-      notes: args.notes,
+      dominantHand: args.dominantHand,
+      // Address
+      addressStreet: args.addressStreet,
+      addressCity: args.addressCity,
+      addressState: args.addressState,
+      addressZip: args.addressZip,
+      // Emergency Contacts
       emergencyContactName: args.emergencyContactName,
       emergencyContactPhone: args.emergencyContactPhone,
+      emergencyContactRelationship: args.emergencyContactRelationship,
+      emergencyContact2Name: args.emergencyContact2Name,
+      emergencyContact2Phone: args.emergencyContact2Phone,
+      emergencyContact2Relationship: args.emergencyContact2Relationship,
+      // Medical History
+      allergies: args.allergies,
+      medications: args.medications,
+      medicalConditions: args.medicalConditions,
+      previousSurgeries: args.previousSurgeries,
+      previousInjuries: args.previousInjuries,
+      // Insurance
+      insuranceProvider: args.insuranceProvider,
+      insurancePolicyNumber: args.insurancePolicyNumber,
+      insuranceGroupNumber: args.insuranceGroupNumber,
+      insurancePhone: args.insurancePhone,
+      policyHolderName: args.policyHolderName,
+      policyHolderRelationship: args.policyHolderRelationship,
+      // Primary Care
+      primaryPhysicianName: args.primaryPhysicianName,
+      primaryPhysicianPhone: args.primaryPhysicianPhone,
+      // Notes
+      notes: args.notes,
       inviteSentAt: args.sendInvite && args.email ? timestamp : undefined,
       isActive: true,
       createdAt: timestamp,
@@ -472,19 +543,51 @@ export const selfRegister = mutation({
 export const update = mutation({
   args: {
     athleteId: v.id("athletes"),
+    // Basic Info
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
+    preferredName: v.optional(v.string()),
     email: v.optional(v.string()),
+    phone: v.optional(v.string()),
     dateOfBirth: v.optional(v.string()),
     sex: v.optional(sexValidator),
+    // Athletic Info
     classYear: v.optional(v.string()),
     jerseyNumber: v.optional(v.string()),
     position: v.optional(v.string()),
     heightInches: v.optional(v.number()),
     weightLbs: v.optional(v.number()),
-    notes: v.optional(v.string()),
+    dominantHand: v.optional(dominantHandValidator),
+    // Address
+    addressStreet: v.optional(v.string()),
+    addressCity: v.optional(v.string()),
+    addressState: v.optional(v.string()),
+    addressZip: v.optional(v.string()),
+    // Emergency Contacts
     emergencyContactName: v.optional(v.string()),
     emergencyContactPhone: v.optional(v.string()),
+    emergencyContactRelationship: v.optional(v.string()),
+    emergencyContact2Name: v.optional(v.string()),
+    emergencyContact2Phone: v.optional(v.string()),
+    emergencyContact2Relationship: v.optional(v.string()),
+    // Medical History
+    allergies: v.optional(v.string()),
+    medications: v.optional(v.string()),
+    medicalConditions: v.optional(v.string()),
+    previousSurgeries: v.optional(v.string()),
+    previousInjuries: v.optional(v.string()),
+    // Insurance
+    insuranceProvider: v.optional(v.string()),
+    insurancePolicyNumber: v.optional(v.string()),
+    insuranceGroupNumber: v.optional(v.string()),
+    insurancePhone: v.optional(v.string()),
+    policyHolderName: v.optional(v.string()),
+    policyHolderRelationship: v.optional(v.string()),
+    // Primary Care
+    primaryPhysicianName: v.optional(v.string()),
+    primaryPhysicianPhone: v.optional(v.string()),
+    // Notes & Status
+    notes: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
   },
   returns: v.boolean(),
@@ -499,19 +602,51 @@ export const update = mutation({
     };
 
     // Only include fields that were provided
+    // Basic Info
     if (args.firstName !== undefined) updates.firstName = args.firstName;
     if (args.lastName !== undefined) updates.lastName = args.lastName;
+    if (args.preferredName !== undefined) updates.preferredName = args.preferredName;
     if (args.email !== undefined) updates.email = args.email;
+    if (args.phone !== undefined) updates.phone = args.phone;
     if (args.dateOfBirth !== undefined) updates.dateOfBirth = args.dateOfBirth;
     if (args.sex !== undefined) updates.sex = args.sex;
+    // Athletic Info
     if (args.classYear !== undefined) updates.classYear = args.classYear;
     if (args.jerseyNumber !== undefined) updates.jerseyNumber = args.jerseyNumber;
     if (args.position !== undefined) updates.position = args.position;
     if (args.heightInches !== undefined) updates.heightInches = args.heightInches;
     if (args.weightLbs !== undefined) updates.weightLbs = args.weightLbs;
-    if (args.notes !== undefined) updates.notes = args.notes;
+    if (args.dominantHand !== undefined) updates.dominantHand = args.dominantHand;
+    // Address
+    if (args.addressStreet !== undefined) updates.addressStreet = args.addressStreet;
+    if (args.addressCity !== undefined) updates.addressCity = args.addressCity;
+    if (args.addressState !== undefined) updates.addressState = args.addressState;
+    if (args.addressZip !== undefined) updates.addressZip = args.addressZip;
+    // Emergency Contacts
     if (args.emergencyContactName !== undefined) updates.emergencyContactName = args.emergencyContactName;
     if (args.emergencyContactPhone !== undefined) updates.emergencyContactPhone = args.emergencyContactPhone;
+    if (args.emergencyContactRelationship !== undefined) updates.emergencyContactRelationship = args.emergencyContactRelationship;
+    if (args.emergencyContact2Name !== undefined) updates.emergencyContact2Name = args.emergencyContact2Name;
+    if (args.emergencyContact2Phone !== undefined) updates.emergencyContact2Phone = args.emergencyContact2Phone;
+    if (args.emergencyContact2Relationship !== undefined) updates.emergencyContact2Relationship = args.emergencyContact2Relationship;
+    // Medical History
+    if (args.allergies !== undefined) updates.allergies = args.allergies;
+    if (args.medications !== undefined) updates.medications = args.medications;
+    if (args.medicalConditions !== undefined) updates.medicalConditions = args.medicalConditions;
+    if (args.previousSurgeries !== undefined) updates.previousSurgeries = args.previousSurgeries;
+    if (args.previousInjuries !== undefined) updates.previousInjuries = args.previousInjuries;
+    // Insurance
+    if (args.insuranceProvider !== undefined) updates.insuranceProvider = args.insuranceProvider;
+    if (args.insurancePolicyNumber !== undefined) updates.insurancePolicyNumber = args.insurancePolicyNumber;
+    if (args.insuranceGroupNumber !== undefined) updates.insuranceGroupNumber = args.insuranceGroupNumber;
+    if (args.insurancePhone !== undefined) updates.insurancePhone = args.insurancePhone;
+    if (args.policyHolderName !== undefined) updates.policyHolderName = args.policyHolderName;
+    if (args.policyHolderRelationship !== undefined) updates.policyHolderRelationship = args.policyHolderRelationship;
+    // Primary Care
+    if (args.primaryPhysicianName !== undefined) updates.primaryPhysicianName = args.primaryPhysicianName;
+    if (args.primaryPhysicianPhone !== undefined) updates.primaryPhysicianPhone = args.primaryPhysicianPhone;
+    // Notes & Status
+    if (args.notes !== undefined) updates.notes = args.notes;
     if (args.isActive !== undefined) updates.isActive = args.isActive;
 
     await ctx.db.patch(args.athleteId, updates);

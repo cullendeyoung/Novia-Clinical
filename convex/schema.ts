@@ -150,19 +150,60 @@ export default defineSchema({
     userId: v.optional(v.id("users")), // If they've created an account
     teamId: v.id("teams"),
     externalAthleteRef: v.optional(v.string()), // For roster sync from external systems
+
+    // Basic Info
     firstName: v.string(),
     lastName: v.string(),
+    preferredName: v.optional(v.string()), // Nickname
     email: v.optional(v.string()), // Athlete email for invitations/profile completion
+    phone: v.optional(v.string()),
     dateOfBirth: v.optional(v.string()), // ISO date string
     sex: v.optional(sexValidator),
+
+    // Athletic Info
     classYear: v.optional(v.string()), // "Freshman", "Sophomore", "Junior", "Senior", "Graduate"
     jerseyNumber: v.optional(v.string()),
     position: v.optional(v.string()), // "Point Guard", "Goalkeeper", etc.
     heightInches: v.optional(v.number()),
     weightLbs: v.optional(v.number()),
-    notes: v.optional(v.string()), // General notes
+    dominantHand: v.optional(v.union(v.literal("Left"), v.literal("Right"), v.literal("Ambidextrous"))),
+
+    // Address
+    addressStreet: v.optional(v.string()),
+    addressCity: v.optional(v.string()),
+    addressState: v.optional(v.string()),
+    addressZip: v.optional(v.string()),
+
+    // Emergency Contacts
     emergencyContactName: v.optional(v.string()),
     emergencyContactPhone: v.optional(v.string()),
+    emergencyContactRelationship: v.optional(v.string()),
+    emergencyContact2Name: v.optional(v.string()),
+    emergencyContact2Phone: v.optional(v.string()),
+    emergencyContact2Relationship: v.optional(v.string()),
+
+    // Medical History
+    allergies: v.optional(v.string()), // JSON array or comma-separated
+    medications: v.optional(v.string()), // Current medications
+    medicalConditions: v.optional(v.string()), // Chronic conditions (asthma, diabetes, etc.)
+    previousSurgeries: v.optional(v.string()),
+    previousInjuries: v.optional(v.string()), // Prior to joining team
+
+    // Insurance Info
+    insuranceProvider: v.optional(v.string()),
+    insurancePolicyNumber: v.optional(v.string()),
+    insuranceGroupNumber: v.optional(v.string()),
+    insurancePhone: v.optional(v.string()),
+    policyHolderName: v.optional(v.string()),
+    policyHolderRelationship: v.optional(v.string()),
+
+    // Primary Care
+    primaryPhysicianName: v.optional(v.string()),
+    primaryPhysicianPhone: v.optional(v.string()),
+
+    // Notes
+    notes: v.optional(v.string()), // General notes
+
     // Profile completion status
     profileCompletedAt: v.optional(v.number()), // When athlete completed their profile
     inviteSentAt: v.optional(v.number()), // When invite email was sent
