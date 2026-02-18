@@ -15,6 +15,8 @@ import {
   Mail,
   Copy,
   Check,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -55,27 +57,45 @@ export default function Athletes() {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showInvitePanel, setShowInvitePanel] = useState(false);
+  const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedEmail, setCopiedEmail] = useState(false);
 
-  // Form state
+  // Form state - Essential info (AT fills)
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [jerseyNumber, setJerseyNumber] = useState("");
   const [position, setPosition] = useState("");
   const [classYear, setClassYear] = useState("");
   const [sex, setSex] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
 
+  // Form state - Additional info (athlete can fill)
+  const [heightFeet, setHeightFeet] = useState("");
+  const [heightInches, setHeightInches] = useState("");
+  const [weight, setWeight] = useState("");
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
+  const [notes, setNotes] = useState("");
+
   const resetForm = () => {
     setFirstName("");
     setLastName("");
+    setEmail("");
     setJerseyNumber("");
     setPosition("");
     setClassYear("");
     setSex("");
     setDateOfBirth("");
+    setHeightFeet("");
+    setHeightInches("");
+    setWeight("");
+    setEmergencyContactName("");
+    setEmergencyContactPhone("");
+    setNotes("");
+    setShowAdditionalInfo(false);
   };
 
   const handleAddAthlete = async (e: React.FormEvent) => {
@@ -86,7 +106,21 @@ export default function Athletes() {
       return;
     }
 
+    // Basic email validation if provided
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     if (!teamId) return;
+
+    // Calculate height in inches if provided
+    let totalHeightInches: number | undefined;
+    if (heightFeet || heightInches) {
+      const feet = parseInt(heightFeet) || 0;
+      const inches = parseInt(heightInches) || 0;
+      totalHeightInches = feet * 12 + inches;
+    }
 
     setIsAdding(true);
     try {
@@ -94,13 +128,23 @@ export default function Athletes() {
         teamId: teamId as Id<"teams">,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        email: email.trim() || undefined,
         jerseyNumber: jerseyNumber || undefined,
         position: position || undefined,
         classYear: classYear || undefined,
         sex: sex as "M" | "F" | "Other" | undefined,
         dateOfBirth: dateOfBirth || undefined,
+        heightInches: totalHeightInches,
+        weightLbs: weight ? parseInt(weight) : undefined,
+        emergencyContactName: emergencyContactName.trim() || undefined,
+        emergencyContactPhone: emergencyContactPhone.trim() || undefined,
+        notes: notes.trim() || undefined,
+        sendInvite: !!email.trim(),
       });
-      toast.success("Athlete added successfully!");
+      const successMessage = email.trim()
+        ? "Athlete added! They'll receive an email to complete their profile."
+        : "Athlete added successfully!";
+      toast.success(successMessage);
       setShowAddForm(false);
       resetForm();
     } catch (error) {
@@ -301,6 +345,7 @@ ${orgName} Athletic Training`;
             Add New Athlete
           </h2>
           <form onSubmit={handleAddAthlete} className="space-y-4">
+            {/* Essential Info */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div>
                 <Label htmlFor="firstName">First Name *</Label>
@@ -323,6 +368,19 @@ ${orgName} Athletic Training`;
                 />
               </div>
               <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="athlete@email.com"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Athlete will receive an invite to complete their profile
+                </p>
+              </div>
+              <div>
                 <Label htmlFor="jerseyNumber">Jersey Number</Label>
                 <Input
                   id="jerseyNumber"
@@ -331,6 +389,8 @@ ${orgName} Athletic Training`;
                   placeholder="23"
                 />
               </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div>
                 <Label htmlFor="position">Position</Label>
                 <Input
@@ -340,8 +400,6 @@ ${orgName} Athletic Training`;
                   placeholder="Point Guard"
                 />
               </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <Label htmlFor="classYear">Class Year</Label>
                 <Select
@@ -370,7 +428,106 @@ ${orgName} Athletic Training`;
                 />
               </div>
             </div>
-            <div className="flex gap-2">
+
+            {/* Collapsible Additional Info */}
+            <div className="border-t border-slate-200 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
+                className="flex w-full items-center justify-between text-left"
+              >
+                <div>
+                  <span className="font-medium text-slate-700">
+                    Additional Athlete Information
+                  </span>
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    (can be filled out by athlete)
+                  </span>
+                </div>
+                {showAdditionalInfo ? (
+                  <ChevronUp className="h-5 w-5 text-slate-400" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-slate-400" />
+                )}
+              </button>
+
+              {showAdditionalInfo && (
+                <div className="mt-4 space-y-4 rounded-lg bg-slate-50 p-4">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                      <Label>Height</Label>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="8"
+                            value={heightFeet}
+                            onChange={(e) => setHeightFeet(e.target.value)}
+                            placeholder="Ft"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="11"
+                            value={heightInches}
+                            onChange={(e) => setHeightInches(e.target.value)}
+                            placeholder="In"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="weight">Weight (lbs)</Label>
+                      <Input
+                        id="weight"
+                        type="number"
+                        min="0"
+                        value={weight}
+                        onChange={(e) => setWeight(e.target.value)}
+                        placeholder="180"
+                      />
+                    </div>
+                    <div className="md:col-span-1" />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="emergencyContactName">Emergency Contact Name</Label>
+                      <Input
+                        id="emergencyContactName"
+                        value={emergencyContactName}
+                        onChange={(e) => setEmergencyContactName(e.target.value)}
+                        placeholder="Jane Smith"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="emergencyContactPhone">Emergency Contact Phone</Label>
+                      <Input
+                        id="emergencyContactPhone"
+                        type="tel"
+                        value={emergencyContactPhone}
+                        onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                        placeholder="(555) 123-4567"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="notes">Notes</Label>
+                    <textarea
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Any relevant notes about the athlete..."
+                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-h-[80px]"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-2">
               <Button type="submit" disabled={isAdding}>
                 {isAdding ? "Adding..." : "Add Athlete"}
               </Button>

@@ -152,6 +152,7 @@ export default defineSchema({
     externalAthleteRef: v.optional(v.string()), // For roster sync from external systems
     firstName: v.string(),
     lastName: v.string(),
+    email: v.optional(v.string()), // Athlete email for invitations/profile completion
     dateOfBirth: v.optional(v.string()), // ISO date string
     sex: v.optional(sexValidator),
     classYear: v.optional(v.string()), // "Freshman", "Sophomore", "Junior", "Senior", "Graduate"
@@ -162,6 +163,9 @@ export default defineSchema({
     notes: v.optional(v.string()), // General notes
     emergencyContactName: v.optional(v.string()),
     emergencyContactPhone: v.optional(v.string()),
+    // Profile completion status
+    profileCompletedAt: v.optional(v.number()), // When athlete completed their profile
+    inviteSentAt: v.optional(v.number()), // When invite email was sent
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),

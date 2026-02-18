@@ -126,6 +126,7 @@ export const getById = query({
       teamName: v.string(),
       firstName: v.string(),
       lastName: v.string(),
+      email: v.optional(v.string()),
       dateOfBirth: v.optional(v.string()),
       sex: v.optional(sexValidator),
       classYear: v.optional(v.string()),
@@ -136,6 +137,8 @@ export const getById = query({
       notes: v.optional(v.string()),
       emergencyContactName: v.optional(v.string()),
       emergencyContactPhone: v.optional(v.string()),
+      profileCompletedAt: v.optional(v.number()),
+      inviteSentAt: v.optional(v.number()),
       isActive: v.boolean(),
       createdAt: v.number(),
       updatedAt: v.number(),
@@ -158,6 +161,7 @@ export const getById = query({
       teamName: team?.name || "Unknown Team",
       firstName: athlete.firstName,
       lastName: athlete.lastName,
+      email: athlete.email,
       dateOfBirth: athlete.dateOfBirth,
       sex: athlete.sex,
       classYear: athlete.classYear,
@@ -168,6 +172,8 @@ export const getById = query({
       notes: athlete.notes,
       emergencyContactName: athlete.emergencyContactName,
       emergencyContactPhone: athlete.emergencyContactPhone,
+      profileCompletedAt: athlete.profileCompletedAt,
+      inviteSentAt: athlete.inviteSentAt,
       isActive: athlete.isActive,
       createdAt: athlete.createdAt,
       updatedAt: athlete.updatedAt,
@@ -293,6 +299,7 @@ export const create = mutation({
     teamId: v.id("teams"),
     firstName: v.string(),
     lastName: v.string(),
+    email: v.optional(v.string()),
     dateOfBirth: v.optional(v.string()),
     sex: v.optional(sexValidator),
     classYear: v.optional(v.string()),
@@ -303,6 +310,7 @@ export const create = mutation({
     notes: v.optional(v.string()),
     emergencyContactName: v.optional(v.string()),
     emergencyContactPhone: v.optional(v.string()),
+    sendInvite: v.optional(v.boolean()), // Whether to send profile completion invite
   },
   returns: v.id("athletes"),
   handler: async (ctx, args) => {
@@ -323,6 +331,7 @@ export const create = mutation({
       teamId: args.teamId,
       firstName: args.firstName,
       lastName: args.lastName,
+      email: args.email,
       dateOfBirth: args.dateOfBirth,
       sex: args.sex,
       classYear: args.classYear,
@@ -333,6 +342,7 @@ export const create = mutation({
       notes: args.notes,
       emergencyContactName: args.emergencyContactName,
       emergencyContactPhone: args.emergencyContactPhone,
+      inviteSentAt: args.sendInvite && args.email ? timestamp : undefined,
       isActive: true,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -342,6 +352,7 @@ export const create = mutation({
     // Log the creation
     await logAuditEvent(ctx, auth, auth.orgId, "create", "athlete", athleteId, {
       name: `${args.firstName} ${args.lastName}`,
+      email: args.email,
       teamId: args.teamId,
     });
 
@@ -463,6 +474,7 @@ export const update = mutation({
     athleteId: v.id("athletes"),
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
+    email: v.optional(v.string()),
     dateOfBirth: v.optional(v.string()),
     sex: v.optional(sexValidator),
     classYear: v.optional(v.string()),
@@ -489,6 +501,7 @@ export const update = mutation({
     // Only include fields that were provided
     if (args.firstName !== undefined) updates.firstName = args.firstName;
     if (args.lastName !== undefined) updates.lastName = args.lastName;
+    if (args.email !== undefined) updates.email = args.email;
     if (args.dateOfBirth !== undefined) updates.dateOfBirth = args.dateOfBirth;
     if (args.sex !== undefined) updates.sex = args.sex;
     if (args.classYear !== undefined) updates.classYear = args.classYear;
