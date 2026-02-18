@@ -127,6 +127,22 @@ export default function Home() {
             <p className="mt-4 text-sm text-muted-foreground">
               14-day free trial. No credit card required.
             </p>
+            <div className="mt-6 border-t border-slate-200 pt-6">
+              <p className="text-sm text-muted-foreground mb-3">
+                Already have an account?
+              </p>
+              <Button
+                asChild
+                variant="secondary"
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                <a href="/portal" target="_blank" rel="noopener noreferrer">
+                  Open Portal
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </div>
           </div>
         </div>
       </section>

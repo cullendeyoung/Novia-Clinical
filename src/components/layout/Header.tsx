@@ -43,7 +43,7 @@ export default function Header() {
           ) : isAuthenticated ? (
             <>
               <Link
-                to="/dashboard"
+                to="/auth-router"
                 className="inline-flex h-9 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground shadow-xs transition hover:bg-gray-200"
               >
                 Dashboard
@@ -88,12 +88,14 @@ export default function Header() {
               >
                 Universities/Organizations
               </Link>
-              <Link
-                to="/login"
+              <a
+                href="/portal"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex h-9 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground shadow-xs transition hover:bg-gray-200"
               >
-                Sign In
-              </Link>
+                Portal
+              </a>
               <Link
                 to="/register"
                 className="inline-flex h-9 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90"

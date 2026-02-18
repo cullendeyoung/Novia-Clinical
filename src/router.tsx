@@ -18,6 +18,7 @@ import Staff from "./pages/dashboard/Staff";
 import NewSession from "./pages/dashboard/NewSession";
 import Patients from "./pages/dashboard/Patients";
 import ErrorPage from "./pages/Error";
+import Portal from "./pages/Portal";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import GuestRoute from "./components/auth/GuestRoute";
 import AuthRouter from "./components/auth/AuthRouter";
@@ -42,6 +43,10 @@ export const router = createBrowserRouter([
       {
         path: "/dev-setup",
         element: <DevSetup />,
+      },
+      {
+        path: "/portal",
+        element: <Portal />,
       },
       {
         element: <GuestRoute />,
