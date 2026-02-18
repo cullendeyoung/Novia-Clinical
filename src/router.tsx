@@ -18,6 +18,7 @@ import Staff from "./pages/dashboard/Staff";
 import InviteStaff from "./pages/dashboard/InviteStaff";
 import Teams from "./pages/dashboard/Teams";
 import Athletes from "./pages/dashboard/Athletes";
+import Settings from "./pages/dashboard/Settings";
 import NewSession from "./pages/dashboard/NewSession";
 import Patients from "./pages/dashboard/Patients";
 import ErrorPage from "./pages/Error";
@@ -128,6 +129,10 @@ export const router = createBrowserRouter([
               {
                 path: "staff/invite",
                 element: <InviteStaff />,
+              },
+              {
+                path: "settings",
+                element: <Settings />,
               },
             ],
           },
