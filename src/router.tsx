@@ -12,6 +12,7 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import DevSetup from "./pages/DevSetup";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import OrganizationDashboardLayout from "./components/dashboard/OrganizationDashboardLayout";
+import ATDashboardLayout from "./components/dashboard/ATDashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
 import OrganizationDashboard from "./pages/dashboard/OrganizationDashboard";
 import Staff from "./pages/dashboard/Staff";
@@ -22,6 +23,8 @@ import TeamManage from "./pages/dashboard/TeamManage";
 import Settings from "./pages/dashboard/Settings";
 import NewSession from "./pages/dashboard/NewSession";
 import Patients from "./pages/dashboard/Patients";
+import ATDashboard from "./pages/at/ATDashboard";
+import ATAthletes from "./pages/at/ATAthletes";
 import ErrorPage from "./pages/Error";
 import Portal from "./pages/Portal";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -138,6 +141,20 @@ export const router = createBrowserRouter([
               {
                 path: "settings",
                 element: <Settings />,
+              },
+            ],
+          },
+          {
+            path: "/at",
+            element: <ATDashboardLayout />,
+            children: [
+              {
+                index: true,
+                element: <ATDashboard />,
+              },
+              {
+                path: "athletes",
+                element: <ATAthletes />,
               },
             ],
           },

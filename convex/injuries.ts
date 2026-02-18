@@ -191,6 +191,7 @@ export const getById = query({
 export const listActive = query({
   args: {
     teamId: v.optional(v.id("teams")),
+    limit: v.optional(v.number()),
   },
   returns: v.array(
     v.object({
@@ -268,12 +269,14 @@ export const listActive = query({
     );
 
     // Sort: out first, then limited, then by days since injury (most recent first)
-    return filtered.sort((a, b) => {
+    const sorted = filtered.sort((a, b) => {
       const rtpOrder = { out: 0, limited: 1, full: 2 };
       const rtpDiff = rtpOrder[a.rtpStatus] - rtpOrder[b.rtpStatus];
       if (rtpDiff !== 0) return rtpDiff;
       return b.daysSinceInjury - a.daysSinceInjury;
     });
+
+    return args.limit ? sorted.slice(0, args.limit) : sorted;
   },
 });
 

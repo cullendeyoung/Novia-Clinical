@@ -5,6 +5,7 @@ import {
   UsersRound,
   Settings,
   Building2,
+  Stethoscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NoviaLogo from "@/components/ui/NoviaLogo";
@@ -15,6 +16,8 @@ const navigation = [
   { name: "Athletic Trainers", href: "/org/staff", icon: Users },
   { name: "Settings", href: "/org/settings", icon: Settings },
 ];
+
+const atPortalLink = { name: "AT Portal", href: "/at", icon: Stethoscope };
 
 interface OrganizationSidebarProps {
   organizationName?: string;
@@ -71,6 +74,20 @@ export default function OrganizationSidebar({
           );
         })}
       </nav>
+
+      {/* AT Portal Link */}
+      <div className="border-t border-slate-200 p-3">
+        <Link
+          to={atPortalLink.href}
+          className="flex items-center gap-3 rounded-lg bg-gradient-to-r from-primary/10 to-blue-50 px-3 py-2.5 text-sm font-medium text-primary transition-all hover:from-primary/20 hover:to-blue-100"
+        >
+          <atPortalLink.icon className="h-5 w-5" />
+          <div>
+            <span className="block">{atPortalLink.name}</span>
+            <span className="text-xs font-normal text-muted-foreground">View EMR Interface</span>
+          </div>
+        </Link>
+      </div>
 
       {/* Footer */}
       <div className="border-t border-slate-200 p-4">

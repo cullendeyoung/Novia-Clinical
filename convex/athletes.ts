@@ -258,6 +258,100 @@ export const search = query({
 });
 
 /**
+ * List all athletes across all teams (for org-wide views)
+ */
+export const listAll = query({
+  args: {
+    includeInactive: v.optional(v.boolean()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("athletes"),
+      teamId: v.id("teams"),
+      teamName: v.string(),
+      firstName: v.string(),
+      lastName: v.string(),
+      email: v.optional(v.string()),
+      jerseyNumber: v.optional(v.string()),
+      position: v.optional(v.string()),
+      classYear: v.optional(v.string()),
+      isActive: v.boolean(),
+      activeInjuryCount: v.number(),
+      lastEncounterDate: v.optional(v.number()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const auth = await requireAuth(ctx);
+    requirePermission(auth, "athlete", "read");
+
+    // Get all athletes for the org
+    const athletes = await ctx.db
+      .query("athletes")
+      .withIndex("by_orgId", (q) => q.eq("orgId", auth.orgId))
+      .collect();
+
+    // Filter and enrich
+    const result = await Promise.all(
+      athletes
+        .filter((a) => {
+          if (a.isDeleted) return false;
+          if (!args.includeInactive && !a.isActive) return false;
+          // Org admins and ATs have access to all teams
+          if (auth.role !== "org_admin" && auth.role !== "athletic_trainer" && !hasTeamAccess(auth, a.teamId)) {
+            return false;
+          }
+          return true;
+        })
+        .map(async (a) => {
+          // Get team info
+          const team = await ctx.db.get(a.teamId);
+
+          // Count active injuries
+          const injuries = await ctx.db
+            .query("injuries")
+            .withIndex("by_athleteId_and_status", (q) =>
+              q.eq("athleteId", a._id).eq("status", "active")
+            )
+            .collect();
+          const activeInjuryCount = injuries.filter((i) => !i.isDeleted).length;
+
+          // Get last encounter date
+          const encounters = await ctx.db
+            .query("encounters")
+            .withIndex("by_athleteId", (q) => q.eq("athleteId", a._id))
+            .order("desc")
+            .take(1);
+          const lastEncounter = encounters[0];
+
+          return {
+            _id: a._id,
+            teamId: a.teamId,
+            teamName: team?.name || "Unknown Team",
+            firstName: a.firstName,
+            lastName: a.lastName,
+            email: a.email,
+            jerseyNumber: a.jerseyNumber,
+            position: a.position,
+            classYear: a.classYear,
+            isActive: a.isActive,
+            activeInjuryCount,
+            lastEncounterDate: lastEncounter?.isDeleted
+              ? undefined
+              : lastEncounter?.encounterDatetime,
+          };
+        })
+    );
+
+    // Sort by team, then last name
+    return result.sort((a, b) => {
+      const teamCompare = a.teamName.localeCompare(b.teamName);
+      if (teamCompare !== 0) return teamCompare;
+      return a.lastName.localeCompare(b.lastName);
+    });
+  },
+});
+
+/**
  * Get athlete count for organization dashboard
  */
 export const getCount = query({
