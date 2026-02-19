@@ -5,13 +5,20 @@ import { api } from "../../../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import FullPageSpinner from "@/components/ui/FullPageSpinner";
 import { Button } from "@/components/ui/button";
-import { LogOut, ArrowLeft } from "lucide-react";
+import { LogOut, ArrowLeft, LayoutDashboard, Users, FileText } from "lucide-react";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { ATContext, type ATViewMode } from "@/contexts/ATContext";
+import { ATContext, type ATViewMode, type ATPage } from "@/contexts/ATContext";
 import NoviaLogo from "@/components/ui/NoviaLogo";
-import RosterColumn from "@/components/at/RosterColumn";
-import EncounterColumn from "@/components/at/EncounterColumn";
-import MainContentArea from "@/components/at/MainContentArea";
+import MyDashboard from "@/components/at/MyDashboard";
+import TeamOverview from "@/components/at/TeamOverview";
+import EMRView from "@/components/at/EMRView";
+import { cn } from "@/lib/utils";
+
+const NAV_ITEMS: { id: ATPage; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: "my-dashboard", label: "My Dashboard", icon: LayoutDashboard },
+  { id: "team-overview", label: "Team Overview", icon: Users },
+  { id: "emr", label: "EMR", icon: FileText },
+];
 
 export default function ATDashboardLayout() {
   const { data: session, isPending: isSessionPending } = authClient.useSession();
@@ -21,7 +28,10 @@ export default function ATDashboardLayout() {
   );
   const organization = useQuery(api.organizations.getCurrent);
 
-  // State for the 3-column layout
+  // Page navigation state
+  const [currentPage, setCurrentPage] = useState<ATPage>("my-dashboard");
+
+  // State for the EMR 3-column layout
   const [selectedTeamId, setSelectedTeamId] = useState<Id<"teams"> | null>(null);
   const [selectedAthleteId, setSelectedAthleteId] = useState<Id<"athletes"> | null>(null);
   const [selectedEncounterId, setSelectedEncounterId] = useState<Id<"encounters"> | null>(null);
@@ -48,9 +58,24 @@ export default function ATDashboardLayout() {
     window.location.href = "/login";
   };
 
+  const renderPage = () => {
+    switch (currentPage) {
+      case "my-dashboard":
+        return <MyDashboard />;
+      case "team-overview":
+        return <TeamOverview />;
+      case "emr":
+        return <EMRView />;
+      default:
+        return <MyDashboard />;
+    }
+  };
+
   return (
     <ATContext.Provider
       value={{
+        currentPage,
+        setCurrentPage,
         selectedTeamId,
         setSelectedTeamId,
         selectedAthleteId,
@@ -64,49 +89,64 @@ export default function ATDashboardLayout() {
       <div className="flex h-screen flex-col bg-slate-50">
         {/* Top Header */}
         <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 flex-shrink-0">
+          {/* Left: Logo & Org Name */}
           <div className="flex items-center gap-4">
             <NoviaLogo className="h-7 w-auto" />
             <div className="h-6 w-px bg-slate-200" />
-            <div>
+            <div className="hidden sm:block">
               <p className="text-sm font-semibold text-slate-900">
                 {organization?.name || "Loading..."}
               </p>
-              <p className="text-xs text-muted-foreground">Athletic Training EMR</p>
+              <p className="text-xs text-muted-foreground">Athletic Training</p>
             </div>
             {/* Back to Admin for org_admin users */}
             {currentUser?.role === "org_admin" && (
               <>
-                <div className="h-6 w-px bg-slate-200 ml-2" />
-                <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+                <div className="h-6 w-px bg-slate-200 ml-2 hidden sm:block" />
+                <Button asChild variant="ghost" size="sm" className="text-muted-foreground hidden sm:flex">
                   <Link to="/org">
                     <ArrowLeft className="mr-1 h-4 w-4" />
-                    Admin Portal
+                    Admin
                   </Link>
                 </Button>
               </>
             )}
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
+
+          {/* Center: Navigation */}
+          <nav className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setCurrentPage(item.id)}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  currentPage === item.id
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          {/* Right: User & Sign Out */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground hidden sm:inline">
               {currentUser?.fullName || session?.user?.name}
             </span>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
+              <LogOut className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </header>
 
-        {/* 3-Column Layout */}
+        {/* Page Content */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Column 1: Roster */}
-          <RosterColumn />
-
-          {/* Column 2: Encounter History */}
-          <EncounterColumn />
-
-          {/* Column 3: Main Content Area */}
-          <MainContentArea />
+          {renderPage()}
         </div>
       </div>
     </ATContext.Provider>

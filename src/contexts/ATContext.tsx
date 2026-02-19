@@ -1,21 +1,27 @@
 import { createContext, useContext } from "react";
 import type { Id } from "../../convex/_generated/dataModel";
 
-// View modes for the main content area
+// Top-level page navigation
+export type ATPage = "my-dashboard" | "team-overview" | "emr";
+
+// View modes for the EMR main content area
 export type ATViewMode = "dashboard" | "encounter" | "profile" | "new-encounter";
 
 // Context for sharing state across AT portal
 export interface ATContextType {
+  // Current page
+  currentPage: ATPage;
+  setCurrentPage: (page: ATPage) => void;
   // Team selection
   selectedTeamId: Id<"teams"> | null;
   setSelectedTeamId: (id: Id<"teams"> | null) => void;
-  // Athlete selection
+  // Athlete selection (EMR only)
   selectedAthleteId: Id<"athletes"> | null;
   setSelectedAthleteId: (id: Id<"athletes"> | null) => void;
-  // Encounter selection
+  // Encounter selection (EMR only)
   selectedEncounterId: Id<"encounters"> | null;
   setSelectedEncounterId: (id: Id<"encounters"> | null) => void;
-  // View mode
+  // View mode (EMR only)
   viewMode: ATViewMode;
   setViewMode: (mode: ATViewMode) => void;
 }
