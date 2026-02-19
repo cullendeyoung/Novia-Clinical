@@ -23,8 +23,6 @@ import TeamManage from "./pages/dashboard/TeamManage";
 import Settings from "./pages/dashboard/Settings";
 import NewSession from "./pages/dashboard/NewSession";
 import Patients from "./pages/dashboard/Patients";
-import ATDashboard from "./pages/at/ATDashboard";
-import ATAthletes from "./pages/at/ATAthletes";
 import ErrorPage from "./pages/Error";
 import Portal from "./pages/Portal";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -147,16 +145,6 @@ export const router = createBrowserRouter([
           {
             path: "/at",
             element: <ATDashboardLayout />,
-            children: [
-              {
-                index: true,
-                element: <ATDashboard />,
-              },
-              {
-                path: "athletes",
-                element: <ATAthletes />,
-              },
-            ],
           },
         ],
       },
