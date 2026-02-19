@@ -118,6 +118,11 @@ export default function NewEncounterForm() {
 
   // Update format when encounter type changes
   const handleEncounterTypeChange = (type: EncounterType) => {
+    // If rehab program is selected, redirect to the rehab program form
+    if (type === "rehab_program") {
+      setViewMode("rehab-program");
+      return;
+    }
     setEncounterType(type);
     setNoteFormat(ENCOUNTER_TYPE_CONFIG[type].defaultFormat);
   };
