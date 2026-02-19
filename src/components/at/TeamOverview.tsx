@@ -6,7 +6,6 @@ import {
   Users,
   Activity,
   FileText,
-  AlertCircle,
   ChevronDown,
   ChevronRight,
   CheckCircle,
@@ -58,9 +57,37 @@ export default function TeamOverview() {
     full: activeInjuries?.filter((i) => i.rtpStatus === "full").length ?? 0,
   };
 
+  // Create a map of athlete ID to their worst RTP status
+  const athleteStatusMap = new Map<Id<"athletes">, "full" | "limited" | "out">();
+  activeInjuries?.forEach((injury) => {
+    const currentStatus = athleteStatusMap.get(injury.athleteId);
+    // Priority: out > limited > full
+    if (!currentStatus) {
+      athleteStatusMap.set(injury.athleteId, injury.rtpStatus);
+    } else if (injury.rtpStatus === "out") {
+      athleteStatusMap.set(injury.athleteId, "out");
+    } else if (injury.rtpStatus === "limited" && currentStatus !== "out") {
+      athleteStatusMap.set(injury.athleteId, "limited");
+    }
+  });
+
   const handleGoToEMR = (athleteId: Id<"athletes">) => {
     setSelectedAthleteId(athleteId);
     setCurrentPage("emr");
+  };
+
+  const getStatusColor = (athleteId: Id<"athletes">) => {
+    const status = athleteStatusMap.get(athleteId);
+    if (status === "out") return "bg-red-500";
+    if (status === "limited") return "bg-yellow-500";
+    return "bg-green-500";
+  };
+
+  const getStatusLabel = (athleteId: Id<"athletes">) => {
+    const status = athleteStatusMap.get(athleteId);
+    if (status === "out") return "Out";
+    if (status === "limited") return "Limited";
+    return "Healthy";
   };
 
   return (
@@ -104,7 +131,7 @@ export default function TeamOverview() {
 
       <div className="p-6">
         {/* Roster Health Overview */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h2 className="font-heading text-lg font-semibold text-slate-900 mb-4">
             Roster Health
           </h2>
@@ -175,79 +202,68 @@ export default function TeamOverview() {
           </div>
         </div>
 
-        {/* Main Content Grid */}
+        {/* Main Content Grid - Roster on left, Encounters + Injuries on right */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Injury Report */}
+          {/* Left Column - Full Roster with Status */}
           <div className="rounded-xl border border-slate-200 bg-white">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <div className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-amber-500" />
+                <Users className="h-5 w-5 text-blue-500" />
                 <h2 className="font-heading font-semibold text-slate-900">
-                  Active Injury Report
+                  Roster
                 </h2>
               </div>
               <span className="text-sm font-medium text-slate-500">
-                {injuryStats.total} active
+                {rosterStats.total} athletes
               </span>
             </div>
-            <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
-              {!activeInjuries || activeInjuries.length === 0 ? (
+            <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
+              {!athletes || athletes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                  <CheckCircle className="h-12 w-12 text-green-400 mb-3" />
-                  <p className="font-medium text-slate-900">All Clear!</p>
+                  <Users className="h-12 w-12 text-slate-300 mb-3" />
+                  <p className="font-medium text-slate-900">No athletes</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    No active injuries on the roster
+                    {selectedTeamId ? "No athletes on this team" : "Select a team to view roster"}
                   </p>
                 </div>
               ) : (
-                activeInjuries.map((injury) => (
+                athletes.map((athlete) => (
                   <button
-                    key={injury._id}
-                    onClick={() => handleGoToEMR(injury.athleteId)}
-                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+                    key={athlete._id}
+                    onClick={() => handleGoToEMR(athlete._id)}
+                    className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors text-left"
                   >
                     <div className="flex items-center gap-3">
+                      {/* Status indicator dot */}
                       <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium ${
-                          injury.rtpStatus === "out"
-                            ? "bg-red-100 text-red-700"
-                            : injury.rtpStatus === "limited"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {injury.athleteName[0]}
+                        className={`h-3 w-3 rounded-full flex-shrink-0 ${getStatusColor(athlete._id)}`}
+                        title={getStatusLabel(athlete._id)}
+                      />
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm font-medium text-slate-600">
+                        {athlete.jerseyNumber || athlete.firstName[0]}
                       </div>
                       <div>
-                        <p className="font-medium text-slate-900">{injury.athleteName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {injury.bodyRegion}
-                          {injury.side !== "NA" && ` (${injury.side})`}
-                          {injury.diagnosis && ` • ${injury.diagnosis}`}
+                        <p className="font-medium text-slate-900">
+                          {athlete.firstName} {athlete.lastName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {athlete.position || "No position"}
+                          {athlete.classYear && ` • ${athlete.classYear}`}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                            injury.rtpStatus === "out"
-                              ? "bg-red-100 text-red-700"
-                              : injury.rtpStatus === "limited"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-green-100 text-green-700"
-                          }`}
-                        >
-                          {injury.rtpStatus === "out"
-                            ? "Out"
-                            : injury.rtpStatus === "limited"
-                              ? "Limited"
-                              : "Full"}
-                        </span>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Day {injury.daysSinceInjury}
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          athleteStatusMap.get(athlete._id) === "out"
+                            ? "bg-red-100 text-red-700"
+                            : athleteStatusMap.get(athlete._id) === "limited"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {getStatusLabel(athlete._id)}
+                      </span>
                       <ChevronRight className="h-4 w-4 text-slate-400" />
                     </div>
                   </button>
@@ -256,122 +272,142 @@ export default function TeamOverview() {
             </div>
           </div>
 
-          {/* Recent Encounters */}
-          <div className="rounded-xl border border-slate-200 bg-white">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-emerald-500" />
-                <h2 className="font-heading font-semibold text-slate-900">
-                  Recent Encounters
-                </h2>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCurrentPage("emr")}
-              >
-                View All <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-            <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
-              {!recentEncounters || recentEncounters.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                  <FileText className="h-12 w-12 text-slate-300 mb-3" />
-                  <p className="font-medium text-slate-900">No encounters yet</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Documented encounters will appear here
-                  </p>
+          {/* Right Column - Encounters stacked above Injuries */}
+          <div className="space-y-6">
+            {/* Recent Encounters */}
+            <div className="rounded-xl border border-slate-200 bg-white">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-emerald-500" />
+                  <h2 className="font-heading font-semibold text-slate-900">
+                    Recent Encounters
+                  </h2>
                 </div>
-              ) : (
-                recentEncounters.map((encounter) => (
-                  <button
-                    key={encounter._id}
-                    onClick={() => handleGoToEMR(encounter.athleteId)}
-                    className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-medium text-emerald-700">
-                        {encounter.athleteName[0]}
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{encounter.athleteName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {encounter.encounterType.replace(/_/g, " ")} • {encounter.providerName}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5" />
-                      {new Date(encounter.encounterDatetime).toLocaleDateString()}
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Roster Quick View */}
-        {athletes && athletes.length > 0 && (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-500" />
-                <h2 className="font-heading font-semibold text-slate-900">
-                  Roster ({athletes.length})
-                </h2>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCurrentPage("emr")}
-              >
-                Open EMR <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </div>
-            <div className="grid gap-px bg-slate-100 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {athletes.slice(0, 12).map((athlete) => (
-                <button
-                  key={athlete._id}
-                  onClick={() => handleGoToEMR(athlete._id)}
-                  className="flex items-center gap-3 bg-white px-4 py-3 hover:bg-slate-50 transition-colors text-left"
-                >
-                  <div
-                    className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium ${
-                      athlete.activeInjuryCount > 0
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {athlete.jerseyNumber || athlete.firstName[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-900 truncate">
-                      {athlete.firstName} {athlete.lastName}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {athlete.position || "No position"}
-                    </p>
-                  </div>
-                  {athlete.activeInjuryCount > 0 && (
-                    <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                  )}
-                </button>
-              ))}
-            </div>
-            {athletes.length > 12 && (
-              <div className="border-t border-slate-200 px-5 py-3 text-center">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setCurrentPage("emr")}
                 >
-                  View all {athletes.length} athletes
+                  View All <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>
-            )}
+              <div className="divide-y divide-slate-100 max-h-[280px] overflow-y-auto">
+                {!recentEncounters || recentEncounters.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center px-4">
+                    <FileText className="h-10 w-10 text-slate-300 mb-2" />
+                    <p className="font-medium text-slate-900">No encounters yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Documented encounters will appear here
+                    </p>
+                  </div>
+                ) : (
+                  recentEncounters.map((encounter) => (
+                    <button
+                      key={encounter._id}
+                      onClick={() => handleGoToEMR(encounter.athleteId)}
+                      className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-medium text-emerald-700">
+                          {encounter.athleteName[0]}
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-900">{encounter.athleteName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {encounter.encounterType.replace(/_/g, " ")} • {encounter.providerName}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5" />
+                        {new Date(encounter.encounterDatetime).toLocaleDateString()}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Active Injury Report */}
+            <div className="rounded-xl border border-slate-200 bg-white">
+              <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-amber-500" />
+                  <h2 className="font-heading font-semibold text-slate-900">
+                    Active Injury Report
+                  </h2>
+                </div>
+                <span className="text-sm font-medium text-slate-500">
+                  {injuryStats.total} active
+                </span>
+              </div>
+              <div className="divide-y divide-slate-100 max-h-[280px] overflow-y-auto">
+                {!activeInjuries || activeInjuries.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center px-4">
+                    <CheckCircle className="h-10 w-10 text-green-400 mb-2" />
+                    <p className="font-medium text-slate-900">All Clear!</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      No active injuries on the roster
+                    </p>
+                  </div>
+                ) : (
+                  activeInjuries.map((injury) => (
+                    <button
+                      key={injury._id}
+                      onClick={() => handleGoToEMR(injury.athleteId)}
+                      className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium ${
+                            injury.rtpStatus === "out"
+                              ? "bg-red-100 text-red-700"
+                              : injury.rtpStatus === "limited"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {injury.athleteName[0]}
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-900">{injury.athleteName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {injury.bodyRegion}
+                            {injury.side !== "NA" && ` (${injury.side})`}
+                            {injury.diagnosis && ` • ${injury.diagnosis}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                              injury.rtpStatus === "out"
+                                ? "bg-red-100 text-red-700"
+                                : injury.rtpStatus === "limited"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {injury.rtpStatus === "out"
+                              ? "Out"
+                              : injury.rtpStatus === "limited"
+                                ? "Limited"
+                                : "Full"}
+                          </span>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Day {injury.daysSinceInjury}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
