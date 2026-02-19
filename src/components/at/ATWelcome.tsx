@@ -1,196 +1,223 @@
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useATContext } from "@/contexts/ATContext";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Users,
-  Activity,
   FileText,
-  AlertCircle,
   Mic,
-  ArrowLeft,
+  ChevronDown,
+  Plus,
 } from "lucide-react";
+import type { Id } from "../../../convex/_generated/dataModel";
+
+const ENCOUNTER_TYPES = [
+  { value: "initial_eval", label: "Initial Evaluation", description: "First assessment of a new injury or condition" },
+  { value: "daily_care", label: "Daily Care / Treatment", description: "Routine treatment and therapy sessions" },
+  { value: "soap_followup", label: "Follow-Up / Progress Note", description: "Check-in on existing injury progress" },
+  { value: "rtp_clearance", label: "Return-to-Play Clearance", description: "Final clearance assessment" },
+  { value: "other", label: "Other Documentation", description: "General notes and documentation" },
+];
 
 export default function ATWelcome() {
-  const stats = useQuery(api.organizations.getStats);
-  const activeInjuries = useQuery(api.injuries.listActive, { limit: 5 });
-  const recentEncounters = useQuery(api.encounters.listRecent, { limit: 5 });
+  const { setSelectedAthleteId, setSelectedTeamId, setViewMode } = useATContext();
+  const [showStartDocument, setShowStartDocument] = useState(false);
+  const [selectedAthlete, setSelectedAthlete] = useState<Id<"athletes"> | "">("");
+  const [selectedTeam, setSelectedTeam] = useState<Id<"teams"> | "">("");
+  const [selectedEncounterType, setSelectedEncounterType] = useState("");
+
+  const teams = useQuery(api.teams.list, {});
+  const athletes = useQuery(
+    api.athletes.listByTeam,
+    selectedTeam ? { teamId: selectedTeam } : "skip"
+  );
+
+  const handleStartDocument = () => {
+    if (!selectedAthlete || !selectedEncounterType) return;
+
+    setSelectedAthleteId(selectedAthlete);
+    if (selectedTeam) {
+      setSelectedTeamId(selectedTeam);
+    }
+    setViewMode("new-encounter");
+  };
+
+  const handleAthleteChange = (athleteId: string) => {
+    setSelectedAthlete(athleteId as Id<"athletes"> | "");
+  };
+
+  const handleTeamChange = (teamId: string) => {
+    setSelectedTeam(teamId as Id<"teams"> | "");
+    setSelectedAthlete(""); // Reset athlete when team changes
+  };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-50 p-6">
-      {/* Welcome Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 text-muted-foreground mb-2">
-          <ArrowLeft className="h-4 w-4" />
-          <span className="text-sm">Select an athlete from the roster</span>
-        </div>
-        <h1 className="font-heading text-2xl font-semibold text-slate-900">
-          Athletic Training Dashboard
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Quick overview of your organization
-        </p>
-      </div>
+    <div className="flex-1 flex items-center justify-center bg-slate-50 p-6">
+      <div className="w-full max-w-lg">
+        {!showStartDocument ? (
+          // Initial state - simple prompt
+          <div className="text-center">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 mb-6">
+              <FileText className="h-8 w-8 text-slate-400" />
+            </div>
+            <h2 className="text-xl font-semibold text-slate-900 mb-2">
+              Ready to Document
+            </h2>
+            <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
+              Select an athlete from the roster on the left, or start a new document below.
+            </p>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-4 mb-8">
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Athletes</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">
-                {stats?.athleteCount ?? "-"}
-              </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button
+                size="lg"
+                onClick={() => setShowStartDocument(true)}
+                className="w-full sm:w-auto"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                Start a Document
+              </Button>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-          </div>
-        </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Active Injuries</p>
-              <p className="mt-1 text-2xl font-semibold text-amber-600">
-                {activeInjuries?.length ?? "-"}
-              </p>
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100">
-              <AlertCircle className="h-5 w-5 text-amber-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Teams</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">
-                {stats?.teamCount ?? "-"}
-              </p>
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100">
-              <Users className="h-5 w-5 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Today</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">
-                {recentEncounters?.filter(
-                  (e) => new Date(e.encounterDatetime).toDateString() === new Date().toDateString()
-                ).length ?? 0}
-              </p>
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
-              <FileText className="h-5 w-5 text-emerald-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Two Column Layout */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Active Injuries */}
-        <div className="rounded-xl border border-slate-200 bg-white">
-          <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-4">
-            <Activity className="h-5 w-5 text-amber-500" />
-            <h2 className="font-heading font-semibold text-slate-900">Active Injuries</h2>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {!activeInjuries || activeInjuries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Activity className="mb-2 h-8 w-8 text-slate-300" />
-                <p className="text-sm text-muted-foreground">No active injuries</p>
-              </div>
-            ) : (
-              activeInjuries.map((injury) => (
-                <div
-                  key={injury._id}
-                  className="flex items-center justify-between px-5 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-sm font-medium text-amber-700">
-                      {injury.athleteName?.[0] || "?"}
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{injury.athleteName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                      injury.rtpStatus === "full"
-                        ? "bg-green-100 text-green-700"
-                        : injury.rtpStatus === "limited"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {injury.rtpStatus === "full" ? "Full" : injury.rtpStatus === "limited" ? "Limited" : "Out"}
-                  </span>
+            {/* Hint about ambient notes */}
+            <div className="mt-8 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-blue-50 p-4 text-left">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0">
+                  <Mic className="h-5 w-5" />
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Recent Encounters */}
-        <div className="rounded-xl border border-slate-200 bg-white">
-          <div className="flex items-center gap-2 border-b border-slate-200 px-5 py-4">
-            <FileText className="h-5 w-5 text-emerald-500" />
-            <h2 className="font-heading font-semibold text-slate-900">Recent Encounters</h2>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {!recentEncounters || recentEncounters.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <FileText className="mb-2 h-8 w-8 text-slate-300" />
-                <p className="text-sm text-muted-foreground">No recent encounters</p>
-              </div>
-            ) : (
-              recentEncounters.map((encounter) => (
-                <div
-                  key={encounter._id}
-                  className="flex items-center justify-between px-5 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-medium text-emerald-700">
-                      {encounter.athleteName?.[0] || "?"}
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{encounter.athleteName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {encounter.encounterType?.replace(/_/g, " ")}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(encounter.encounterDatetime).toLocaleDateString()}
+                <div>
+                  <h3 className="font-medium text-slate-900 text-sm">Voice-Powered Notes</h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Use ambient recording to capture encounters hands-free. AI will help format your notes.
                   </p>
                 </div>
-              ))
-            )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        ) : (
+          // Start document flow
+          <div className="rounded-xl border border-slate-200 bg-white p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Start a Document
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowStartDocument(false);
+                  setSelectedAthlete("");
+                  setSelectedTeam("");
+                  setSelectedEncounterType("");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
 
-      {/* Ambient Notes Promo */}
-      <div className="mt-6 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-blue-50 p-6">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Mic className="h-6 w-6" />
+            {/* Team Selection */}
+            <div className="mb-4">
+              <Label htmlFor="team" className="text-sm font-medium text-slate-700 mb-1.5 block">
+                <span className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-slate-400" />
+                  Select Team
+                </span>
+              </Label>
+              <div className="relative">
+                <select
+                  id="team"
+                  value={selectedTeam}
+                  onChange={(e) => handleTeamChange(e.target.value)}
+                  className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">Choose a team...</option>
+                  {teams?.map((team) => (
+                    <option key={team._id} value={team._id}>
+                      {team.name} ({team.sport})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
+
+            {/* Athlete Selection */}
+            <div className="mb-6">
+              <Label htmlFor="athlete" className="text-sm font-medium text-slate-700 mb-1.5 block">
+                <span className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-slate-400" />
+                  Select Athlete
+                </span>
+              </Label>
+              <div className="relative">
+                <select
+                  id="athlete"
+                  value={selectedAthlete}
+                  onChange={(e) => handleAthleteChange(e.target.value)}
+                  disabled={!selectedTeam}
+                  className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-4 py-2.5 pr-10 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-slate-50 disabled:text-slate-400"
+                >
+                  <option value="">
+                    {!selectedTeam ? "Select a team first..." : "Choose an athlete..."}
+                  </option>
+                  {athletes?.map((athlete) => (
+                    <option key={athlete._id} value={athlete._id}>
+                      {athlete.firstName} {athlete.lastName}
+                      {athlete.jerseyNumber && ` (#${athlete.jerseyNumber})`}
+                      {athlete.position && ` - ${athlete.position}`}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
+
+            {/* Encounter Type Selection */}
+            <div className="mb-6">
+              <Label className="text-sm font-medium text-slate-700 mb-2 block">
+                <span className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-slate-400" />
+                  Document Type
+                </span>
+              </Label>
+              <div className="grid gap-2">
+                {ENCOUNTER_TYPES.map((type) => (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => setSelectedEncounterType(type.value)}
+                    className={`w-full text-left rounded-lg border px-4 py-3 transition-colors ${
+                      selectedEncounterType === type.value
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <p className={`font-medium text-sm ${
+                      selectedEncounterType === type.value ? "text-primary" : "text-slate-900"
+                    }`}>
+                      {type.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {type.description}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Start Button */}
+            <Button
+              className="w-full"
+              size="lg"
+              disabled={!selectedAthlete || !selectedEncounterType}
+              onClick={handleStartDocument}
+            >
+              <Plus className="mr-2 h-5 w-5" />
+              Begin Documentation
+            </Button>
           </div>
-          <div>
-            <h3 className="font-semibold text-slate-900">Ambient Notes</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Select an athlete, then use the New Encounter button to create voice-powered SOAP notes with AI assistance.
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
