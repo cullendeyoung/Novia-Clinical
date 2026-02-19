@@ -8,8 +8,9 @@ export default function MainContentArea() {
   const { selectedAthleteId, selectedEncounterId, viewMode } = useATContext();
 
   // No athlete selected - show welcome/dashboard
+  // If viewMode is "start-document", ATWelcome will show the start document form expanded
   if (!selectedAthleteId) {
-    return <ATWelcome />;
+    return <ATWelcome showStartDocumentInitially={viewMode === "start-document"} />;
   }
 
   // Show based on view mode

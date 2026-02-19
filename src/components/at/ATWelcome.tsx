@@ -21,9 +21,13 @@ const ENCOUNTER_TYPES = [
   { value: "other", label: "Other Documentation", description: "General notes and documentation" },
 ];
 
-export default function ATWelcome() {
+interface ATWelcomeProps {
+  showStartDocumentInitially?: boolean;
+}
+
+export default function ATWelcome({ showStartDocumentInitially = false }: ATWelcomeProps) {
   const { setSelectedAthleteId, setSelectedTeamId, setViewMode } = useATContext();
-  const [showStartDocument, setShowStartDocument] = useState(false);
+  const [showStartDocument, setShowStartDocument] = useState(showStartDocumentInitially);
   const [selectedAthlete, setSelectedAthlete] = useState<Id<"athletes"> | "">("");
   const [selectedTeam, setSelectedTeam] = useState<Id<"teams"> | "">("");
   const [selectedEncounterType, setSelectedEncounterType] = useState("");

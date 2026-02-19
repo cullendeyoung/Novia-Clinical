@@ -9,7 +9,6 @@ import {
   FileText,
   Activity,
   Users,
-  AlertCircle,
   ChevronRight,
   Plus,
   CheckCircle,
@@ -17,10 +16,9 @@ import {
 } from "lucide-react";
 
 export default function MyDashboard() {
-  const { setCurrentPage, setSelectedTeamId, setSelectedAthleteId } = useATContext();
+  const { setCurrentPage, setSelectedTeamId, setSelectedAthleteId, setViewMode } = useATContext();
 
   const currentUser = useQuery(api.users.getCurrent);
-  const stats = useQuery(api.organizations.getStats);
   const recentEncounters = useQuery(api.encounters.listRecent, { limit: 10 });
   const activeInjuries = useQuery(api.injuries.listActive, { limit: 10 });
   const teams = useQuery(api.teams.list, {});
@@ -50,6 +48,12 @@ export default function MyDashboard() {
     setCurrentPage("team-overview");
   };
 
+  const handleNewDocument = () => {
+    setSelectedAthleteId(null);
+    setViewMode("start-document");
+    setCurrentPage("emr");
+  };
+
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 p-6">
       {/* Welcome Header */}
@@ -62,8 +66,8 @@ export default function MyDashboard() {
         </p>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-4 mb-8">
+      {/* Quick Stats - 3 columns now */}
+      <div className="grid gap-4 md:grid-cols-3 mb-8">
         <div className="rounded-xl border border-slate-200 bg-white p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -95,23 +99,6 @@ export default function MyDashboard() {
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
             {activeInjuries?.filter((i) => i.rtpStatus === "out").length ?? 0} athletes out
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Athletes</p>
-              <p className="mt-1 text-3xl font-semibold text-slate-900">
-                {stats?.athleteCount ?? 0}
-              </p>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
-              <Users className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Across {stats?.teamCount ?? 0} teams
           </p>
         </div>
 
@@ -205,35 +192,48 @@ export default function MyDashboard() {
                   <Button
                     size="sm"
                     className="mt-4"
-                    onClick={() => setCurrentPage("emr")}
+                    onClick={handleNewDocument}
                   >
                     <Plus className="mr-1 h-4 w-4" />
-                    New Encounter
+                    New Document
                   </Button>
                 </div>
               ) : (
-                myRecentEncounters.map((encounter) => (
-                  <button
-                    key={encounter._id}
-                    onClick={() => handleGoToEMR(encounter.athleteId)}
-                    className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-medium text-emerald-700">
-                        {encounter.athleteName?.[0] || "?"}
+                <>
+                  {myRecentEncounters.map((encounter) => (
+                    <button
+                      key={encounter._id}
+                      onClick={() => handleGoToEMR(encounter.athleteId)}
+                      className="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-medium text-emerald-700">
+                          {encounter.athleteName?.[0] || "?"}
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-900">{encounter.athleteName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {encounter.encounterType.replace(/_/g, " ")} • {encounter.teamName}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{encounter.athleteName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {encounter.encounterType.replace(/_/g, " ")} • {encounter.teamName}
-                        </p>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(encounter.encounterDatetime).toLocaleDateString()}
                       </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(encounter.encounterDatetime).toLocaleDateString()}
-                    </div>
-                  </button>
-                ))
+                    </button>
+                  ))}
+                  <div className="p-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleNewDocument}
+                    >
+                      <Plus className="mr-1 h-4 w-4" />
+                      New Document
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -281,7 +281,7 @@ export default function MyDashboard() {
           <div className="rounded-xl border border-slate-200 bg-white">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-amber-500" />
+                <Activity className="h-5 w-5 text-amber-500" />
                 <h2 className="font-heading font-semibold text-slate-900">Needs Attention</h2>
               </div>
             </div>

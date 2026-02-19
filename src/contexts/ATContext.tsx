@@ -5,7 +5,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 export type ATPage = "my-dashboard" | "team-overview" | "emr";
 
 // View modes for the EMR main content area
-export type ATViewMode = "dashboard" | "encounter" | "profile" | "new-encounter";
+export type ATViewMode = "dashboard" | "encounter" | "profile" | "new-encounter" | "start-document";
 
 // Context for sharing state across AT portal
 export interface ATContextType {
