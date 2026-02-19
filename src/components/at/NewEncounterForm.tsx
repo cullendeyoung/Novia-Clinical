@@ -17,7 +17,7 @@ import {
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
 
-type EncounterType = "daily_care" | "soap_followup" | "initial_eval" | "rtp_clearance" | "other";
+type EncounterType = "daily_care" | "soap_followup" | "initial_eval" | "rtp_clearance" | "rehab_program" | "other";
 type NoteFormat = "summary" | "soap" | "rtp_form";
 
 interface EncounterTypeConfig {
@@ -26,6 +26,7 @@ interface EncounterTypeConfig {
   defaultFormat: NoteFormat;
   formatOptions?: { value: NoteFormat; label: string }[];
   placeholder: string;
+  isRehabProgram?: boolean;
 }
 
 const ENCOUNTER_TYPE_CONFIG: Record<EncounterType, EncounterTypeConfig> = {
@@ -54,6 +55,13 @@ const ENCOUNTER_TYPE_CONFIG: Record<EncounterType, EncounterTypeConfig> = {
       { value: "summary", label: "Summary" },
     ],
     placeholder: "Document the initial evaluation...\n\nSOAP format will be structured as:\n\nSUBJECTIVE:\n[Chief complaint, mechanism of injury, pain description, history]\n\nOBJECTIVE:\n[Physical exam findings, special tests, ROM, strength, palpation]\n\nASSESSMENT:\n[Working diagnosis, differential diagnoses]\n\nPLAN:\n[Treatment plan, referrals, activity modifications, follow-up]",
+  },
+  rehab_program: {
+    label: "Rehab / Exercise Program",
+    description: "Create exercise program linked to an injury",
+    defaultFormat: "summary",
+    placeholder: "",
+    isRehabProgram: true,
   },
   rtp_clearance: {
     label: "Return-to-Play Clearance",

@@ -52,7 +52,16 @@ const encounterTypeValidator = v.union(
   v.literal("soap_followup"),
   v.literal("initial_eval"),
   v.literal("rtp_clearance"),
+  v.literal("rehab_program"),
   v.literal("other")
+);
+
+// Rehab program status types
+const rehabProgramStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("completed"),
+  v.literal("paused"),
+  v.literal("discontinued")
 );
 
 // Invitation status types
@@ -391,6 +400,55 @@ export default defineSchema({
     .index("by_entityType", ["entityType"])
     .index("by_createdAt", ["createdAt"])
     .index("by_orgId_and_createdAt", ["orgId", "createdAt"]),
+
+  // Rehab Programs - Exercise/rehabilitation programs linked to injuries
+  rehabPrograms: defineTable({
+    orgId: v.id("organizations"),
+    athleteId: v.id("athletes"),
+    injuryId: v.id("injuries"), // Must be linked to an injury
+    name: v.string(), // "ACL Rehab Phase 1", "Ankle Strengthening"
+    description: v.optional(v.string()),
+    status: rehabProgramStatusValidator,
+    startDate: v.string(), // ISO date string
+    targetEndDate: v.optional(v.string()), // Estimated completion date
+    actualEndDate: v.optional(v.string()), // When actually completed
+    notes: v.optional(v.string()), // General notes about the program
+    createdByUserId: v.id("users"), // AT who created it
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_athleteId", ["athleteId"])
+    .index("by_injuryId", ["injuryId"])
+    .index("by_athleteId_and_status", ["athleteId", "status"])
+    .index("by_createdByUserId", ["createdByUserId"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Rehab Exercises - Individual exercises within a rehab program
+  rehabExercises: defineTable({
+    orgId: v.id("organizations"),
+    rehabProgramId: v.id("rehabPrograms"),
+    name: v.string(), // "Quad Sets", "Heel Slides", "SLR"
+    description: v.optional(v.string()), // How to perform the exercise
+    sets: v.optional(v.number()), // Number of sets
+    reps: v.optional(v.string()), // "10-15" or "10" - string to allow ranges
+    holdSeconds: v.optional(v.number()), // For isometric exercises
+    durationMinutes: v.optional(v.number()), // For timed exercises
+    frequency: v.optional(v.string()), // "2x daily", "3x per week"
+    equipment: v.optional(v.string()), // "Theraband", "Foam roller"
+    videoUrl: v.optional(v.string()), // Link to demo video
+    imageUrl: v.optional(v.string()), // Link to exercise image
+    orderIndex: v.number(), // For ordering exercises in the program
+    isActive: v.boolean(), // Can be toggled off without deleting
+    notes: v.optional(v.string()), // Specific notes for this exercise
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_orgId", ["orgId"])
+    .index("by_rehabProgramId", ["rehabProgramId"])
+    .index("by_rehabProgramId_and_orderIndex", ["rehabProgramId", "orderIndex"]),
 
   // Note Templates - Custom templates for different note types
   orgNoteTemplates: defineTable({

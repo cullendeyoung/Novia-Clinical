@@ -16,6 +16,7 @@ import {
   Shield,
   Plus,
   Clock,
+  Dumbbell,
 } from "lucide-react";
 
 export default function AthleteProfile() {
@@ -34,6 +35,11 @@ export default function AthleteProfile() {
   const encounters = useQuery(
     api.encounters.getByAthlete,
     selectedAthleteId ? { athleteId: selectedAthleteId, limit: 5 } : "skip"
+  );
+
+  const rehabPrograms = useQuery(
+    api.rehabPrograms.getActiveByAthlete,
+    selectedAthleteId ? { athleteId: selectedAthleteId } : "skip"
   );
 
   if (!athlete) {
@@ -57,6 +63,10 @@ export default function AthleteProfile() {
   const handleNewEncounter = () => {
     setSelectedEncounterId(null);
     setViewMode("new-encounter");
+  };
+
+  const handleNewRehabProgram = () => {
+    setViewMode("rehab-program");
   };
 
   return (
@@ -233,6 +243,86 @@ export default function AthleteProfile() {
                       >
                         {injury.rtpStatus === "out" ? "Out" : injury.rtpStatus === "limited" ? "Limited" : "Full"}
                       </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Current Rehab Programs */}
+          <div className="rounded-xl border border-slate-200 bg-white">
+            <div className="border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+              <h2 className="font-semibold text-slate-900 flex items-center gap-2">
+                <Dumbbell className="h-4 w-4 text-purple-500" />
+                Current Programs
+              </h2>
+              {activeInjuries.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={handleNewRehabProgram}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <div className="divide-y divide-slate-100">
+              {!rehabPrograms || rehabPrograms.length === 0 ? (
+                <div className="p-5 text-center">
+                  <Dumbbell className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No active rehab programs</p>
+                  {activeInjuries.length > 0 && (
+                    <Button onClick={handleNewRehabProgram} size="sm" className="mt-3">
+                      <Plus className="mr-1 h-4 w-4" />
+                      Create Program
+                    </Button>
+                  )}
+                  {activeInjuries.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Document an injury first to create a program
+                    </p>
+                  )}
+                </div>
+              ) : (
+                rehabPrograms.map((program) => (
+                  <div key={program._id} className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="font-medium text-slate-900">{program.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {program.injuryBodyRegion} • Started {program.startDate}
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                        {program.exercises.length} exercises
+                      </span>
+                    </div>
+                    {program.description && (
+                      <p className="text-sm text-slate-600 mb-3">{program.description}</p>
+                    )}
+                    <div className="space-y-2">
+                      {program.exercises.slice(0, 3).map((exercise) => (
+                        <div
+                          key={exercise._id}
+                          className="rounded-lg bg-slate-50 px-3 py-2 text-sm"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-slate-700">{exercise.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {exercise.sets && exercise.reps && `${exercise.sets}x${exercise.reps}`}
+                              {exercise.holdSeconds && `${exercise.holdSeconds}s hold`}
+                              {exercise.durationMinutes && `${exercise.durationMinutes} min`}
+                            </span>
+                          </div>
+                          {exercise.frequency && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {exercise.frequency}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                      {program.exercises.length > 3 && (
+                        <p className="text-xs text-muted-foreground text-center pt-1">
+                          +{program.exercises.length - 3} more exercises
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))

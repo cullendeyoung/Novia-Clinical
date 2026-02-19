@@ -2,6 +2,7 @@ import { useATContext } from "@/contexts/ATContext";
 import AthleteProfile from "./AthleteProfile";
 import EncounterDetail from "./EncounterDetail";
 import NewEncounterForm from "./NewEncounterForm";
+import RehabProgramForm from "./RehabProgramForm";
 import ATWelcome from "./ATWelcome";
 
 export default function MainContentArea() {
@@ -21,6 +22,8 @@ export default function MainContentArea() {
       return selectedEncounterId ? <EncounterDetail /> : <AthleteProfile />;
     case "new-encounter":
       return <NewEncounterForm />;
+    case "rehab-program":
+      return <RehabProgramForm />;
     default:
       return <AthleteProfile />;
   }

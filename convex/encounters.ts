@@ -23,6 +23,7 @@ const encounterTypeValidator = v.union(
   v.literal("soap_followup"),
   v.literal("initial_eval"),
   v.literal("rtp_clearance"),
+  v.literal("rehab_program"),
   v.literal("other")
 );
 
@@ -625,5 +626,6 @@ export const ENCOUNTER_TYPES = [
   { value: "soap_followup", label: "SOAP Follow-Up" },
   { value: "initial_eval", label: "Initial Evaluation" },
   { value: "rtp_clearance", label: "Return-to-Play Clearance" },
+  { value: "rehab_program", label: "Rehab / Exercise Program" },
   { value: "other", label: "Other" },
 ] as const;

@@ -17,6 +17,7 @@ const ENCOUNTER_TYPES = [
   { value: "initial_eval", label: "Initial Evaluation", description: "First assessment of a new injury or condition" },
   { value: "daily_care", label: "Daily Care / Treatment", description: "Routine treatment and therapy sessions" },
   { value: "soap_followup", label: "Follow-Up / Progress Note", description: "Check-in on existing injury progress" },
+  { value: "rehab_program", label: "Rehab / Exercise Program", description: "Create exercise program linked to an injury" },
   { value: "rtp_clearance", label: "Return-to-Play Clearance", description: "Final clearance assessment" },
   { value: "other", label: "Other Documentation", description: "General notes and documentation" },
 ];
@@ -45,7 +46,13 @@ export default function ATWelcome({ showStartDocumentInitially = false }: ATWelc
     if (selectedTeam) {
       setSelectedTeamId(selectedTeam);
     }
-    setViewMode("new-encounter");
+
+    // Route to rehab program form if that type is selected
+    if (selectedEncounterType === "rehab_program") {
+      setViewMode("rehab-program");
+    } else {
+      setViewMode("new-encounter");
+    }
   };
 
   const handleAthleteChange = (athleteId: string) => {
