@@ -45,7 +45,8 @@ export const getByAthlete = query({
       status: rehabProgramStatusValidator,
       startDate: v.string(),
       targetEndDate: v.optional(v.string()),
-      injuryId: v.id("injuries"),
+      injuryId: v.optional(v.id("injuries")),
+      isPrehab: v.optional(v.boolean()),
       injuryBodyRegion: v.string(),
       injurySide: v.string(),
       exerciseCount: v.number(),
@@ -73,7 +74,7 @@ export const getByAthlete = query({
 
     const result = await Promise.all(
       programs.map(async (program) => {
-        const injury = await ctx.db.get(program.injuryId);
+        const injury = program.injuryId ? await ctx.db.get(program.injuryId) : null;
         const createdBy = await ctx.db.get(program.createdByUserId);
 
         // Count exercises
@@ -90,7 +91,8 @@ export const getByAthlete = query({
           startDate: program.startDate,
           targetEndDate: program.targetEndDate,
           injuryId: program.injuryId,
-          injuryBodyRegion: injury?.bodyRegion || "Unknown",
+          isPrehab: program.isPrehab,
+          injuryBodyRegion: program.isPrehab ? "Prehab" : (injury?.bodyRegion || "Unknown"),
           injurySide: injury?.side || "NA",
           exerciseCount: exercises.filter((e) => e.isActive).length,
           createdByName: createdBy?.fullName || "Unknown",
@@ -115,6 +117,7 @@ export const getActiveByAthlete = query({
       description: v.optional(v.string()),
       status: rehabProgramStatusValidator,
       startDate: v.string(),
+      isPrehab: v.optional(v.boolean()),
       injuryBodyRegion: v.string(),
       exercises: v.array(
         v.object({
@@ -148,7 +151,7 @@ export const getActiveByAthlete = query({
       programs
         .filter((p) => !p.isDeleted)
         .map(async (program) => {
-          const injury = await ctx.db.get(program.injuryId);
+          const injury = program.injuryId ? await ctx.db.get(program.injuryId) : null;
 
           const exercises = await ctx.db
             .query("rehabExercises")
@@ -163,7 +166,8 @@ export const getActiveByAthlete = query({
             description: program.description,
             status: program.status,
             startDate: program.startDate,
-            injuryBodyRegion: injury?.bodyRegion || "Unknown",
+            isPrehab: program.isPrehab,
+            injuryBodyRegion: program.isPrehab ? "Prehab" : (injury?.bodyRegion || "Unknown"),
             exercises: exercises
               .filter((e) => e.isActive)
               .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -197,7 +201,8 @@ export const getById = query({
       _id: v.id("rehabPrograms"),
       athleteId: v.id("athletes"),
       athleteName: v.string(),
-      injuryId: v.id("injuries"),
+      injuryId: v.optional(v.id("injuries")),
+      isPrehab: v.optional(v.boolean()),
       injuryBodyRegion: v.string(),
       injurySide: v.string(),
       name: v.string(),
@@ -245,7 +250,7 @@ export const getById = query({
     }
 
     const athlete = await ctx.db.get(program.athleteId);
-    const injury = await ctx.db.get(program.injuryId);
+    const injury = program.injuryId ? await ctx.db.get(program.injuryId) : null;
     const createdBy = await ctx.db.get(program.createdByUserId);
 
     const exercises = await ctx.db
@@ -262,7 +267,8 @@ export const getById = query({
         ? `${athlete.firstName} ${athlete.lastName}`
         : "Unknown",
       injuryId: program.injuryId,
-      injuryBodyRegion: injury?.bodyRegion || "Unknown",
+      isPrehab: program.isPrehab,
+      injuryBodyRegion: program.isPrehab ? "Prehab" : (injury?.bodyRegion || "Unknown"),
       injurySide: injury?.side || "NA",
       name: program.name,
       description: program.description,
@@ -356,7 +362,8 @@ export const getByInjury = query({
 export const create = mutation({
   args: {
     athleteId: v.id("athletes"),
-    injuryId: v.id("injuries"),
+    injuryId: v.optional(v.id("injuries")), // Optional for prehab programs
+    isPrehab: v.optional(v.boolean()), // True if this is a preventive/prehab program
     name: v.string(),
     description: v.optional(v.string()),
     startDate: v.optional(v.string()),
@@ -384,11 +391,15 @@ export const create = mutation({
     requirePermission(auth, "encounter", "create");
 
     const athlete = await verifyAthleteInOrg(ctx, auth, args.athleteId);
-    const injury = await verifyInjuryInOrg(ctx, auth, args.injuryId);
 
-    // Verify injury belongs to athlete
-    if (injury.athleteId !== args.athleteId) {
-      throw new Error("Injury does not belong to this athlete");
+    // If injuryId is provided, verify it
+    let injury = null;
+    if (args.injuryId) {
+      injury = await verifyInjuryInOrg(ctx, auth, args.injuryId);
+      // Verify injury belongs to athlete
+      if (injury.athleteId !== args.athleteId) {
+        throw new Error("Injury does not belong to this athlete");
+      }
     }
 
     const timestamp = now();
@@ -398,6 +409,7 @@ export const create = mutation({
       orgId: auth.orgId,
       athleteId: args.athleteId,
       injuryId: args.injuryId,
+      isPrehab: args.isPrehab || false,
       name: args.name,
       description: args.description,
       status: "active",
@@ -438,7 +450,7 @@ export const create = mutation({
     await logAuditEvent(ctx, auth, auth.orgId, "create", "rehab_program", programId, {
       athleteName: `${athlete.firstName} ${athlete.lastName}`,
       programName: args.name,
-      injuryBodyRegion: injury.bodyRegion,
+      injuryBodyRegion: injury?.bodyRegion || "Prehab/Preventive",
     });
 
     return programId;

@@ -405,7 +405,8 @@ export default defineSchema({
   rehabPrograms: defineTable({
     orgId: v.id("organizations"),
     athleteId: v.id("athletes"),
-    injuryId: v.id("injuries"), // Must be linked to an injury
+    injuryId: v.optional(v.id("injuries")), // Optional - can be linked to injury or be a prehab program
+    isPrehab: v.optional(v.boolean()), // True if this is a preventive/prehab program without injury
     name: v.string(), // "ACL Rehab Phase 1", "Ankle Strengthening"
     description: v.optional(v.string()),
     status: rehabProgramStatusValidator,

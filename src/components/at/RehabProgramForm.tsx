@@ -63,7 +63,7 @@ export default function RehabProgramForm() {
   // Form state
   const [programName, setProgramName] = useState("");
   const [programDescription, setProgramDescription] = useState("");
-  const [injuryId, setInjuryId] = useState<Id<"injuries"> | "">("");
+  const [injuryId, setInjuryId] = useState<Id<"injuries"> | "new_injury" | "prehab" | "">("");
   const [targetEndDate, setTargetEndDate] = useState("");
   const [programNotes, setProgramNotes] = useState("");
   const [exercises, setExercises] = useState<Exercise[]>([createEmptyExercise()]);
@@ -71,6 +71,15 @@ export default function RehabProgramForm() {
 
   const handleBackToProfile = () => {
     setViewMode("profile");
+  };
+
+  const handleInjuryChange = (value: string) => {
+    if (value === "new_injury") {
+      // Redirect to initial evaluation form to document new injury first
+      setViewMode("new-encounter");
+      return;
+    }
+    setInjuryId(value as Id<"injuries"> | "prehab" | "");
   };
 
   const handleAddExercise = () => {
@@ -92,8 +101,13 @@ export default function RehabProgramForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedAthleteId || !injuryId) {
-      toast.error("Please select an injury for this program");
+    if (!selectedAthleteId) {
+      toast.error("No athlete selected");
+      return;
+    }
+
+    if (!injuryId) {
+      toast.error("Please select an injury or prehab option");
       return;
     }
 
@@ -114,11 +128,13 @@ export default function RehabProgramForm() {
     try {
       await createRehabProgram({
         athleteId: selectedAthleteId,
-        injuryId: injuryId as Id<"injuries">,
+        // For prehab, pass undefined for injuryId
+        injuryId: injuryId === "prehab" ? undefined : (injuryId as Id<"injuries">),
         name: programName,
         description: programDescription || undefined,
         targetEndDate: targetEndDate || undefined,
         notes: programNotes || undefined,
+        isPrehab: injuryId === "prehab",
         exercises: validExercises.map((ex) => ({
           name: ex.name,
           description: ex.description || undefined,
@@ -208,22 +224,28 @@ export default function RehabProgramForm() {
                 <select
                   id="injuryId"
                   value={injuryId}
-                  onChange={(e) => setInjuryId(e.target.value as Id<"injuries"> | "")}
+                  onChange={(e) => handleInjuryChange(e.target.value)}
                   className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="">Select an injury...</option>
-                  {activeInjuries?.map((injury) => (
-                    <option key={injury._id} value={injury._id}>
-                      {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
-                      {injury.diagnosis && ` - ${injury.diagnosis}`}
-                    </option>
-                  ))}
+                  <option value="">Select an option...</option>
+                  <optgroup label="Active Injuries">
+                    {activeInjuries?.map((injury) => (
+                      <option key={injury._id} value={injury._id}>
+                        {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
+                        {injury.diagnosis && ` - ${injury.diagnosis}`}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Other Options">
+                    <option value="prehab">Prehab / Preventive Program</option>
+                    <option value="new_injury">+ Document New Injury First</option>
+                  </optgroup>
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               </div>
-              {activeInjuries?.length === 0 && (
-                <p className="mt-1 text-xs text-amber-600">
-                  No active injuries. Create an initial evaluation first to document an injury.
+              {injuryId === "prehab" && (
+                <p className="mt-1 text-xs text-blue-600">
+                  This program will be created as a prehab/preventive program not linked to a specific injury.
                 </p>
               )}
             </div>
@@ -436,7 +458,7 @@ export default function RehabProgramForm() {
           </Button>
           <Button
             type="submit"
-            disabled={isSaving || !injuryId || !programName.trim()}
+            disabled={isSaving || !injuryId || injuryId === "new_injury" || !programName.trim()}
           >
             {isSaving ? (
               <>

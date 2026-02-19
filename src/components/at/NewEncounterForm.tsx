@@ -25,16 +25,49 @@ interface EncounterTypeConfig {
   description: string;
   defaultFormat: NoteFormat;
   formatOptions?: { value: NoteFormat; label: string }[];
-  placeholder: string;
+  placeholders: Partial<Record<NoteFormat, string>>;
   isRehabProgram?: boolean;
 }
+
+// Format-specific placeholder templates
+const SOAP_PLACEHOLDER = `Document using SOAP format:
+
+SUBJECTIVE:
+[Patient's reported symptoms, pain levels, how they're feeling]
+
+OBJECTIVE:
+[Clinical findings, ROM, strength testing, observations]
+
+ASSESSMENT:
+[Clinical impression, progress status]
+
+PLAN:
+[Treatment plan, exercises, follow-up schedule]`;
+
+const SUMMARY_PLACEHOLDER = `Document the treatment and observations...
+
+Example:
+Treatment: 15 min ice, 10 min e-stim to R knee
+Response: Patient reports 2/10 pain post-treatment (down from 4/10)
+Notes: Continue current protocol, reassess in 2 days`;
+
+const RTP_PLACEHOLDER = `Document the return-to-play assessment...
+
+Include:
+- Current status and functional testing results
+- Criteria met for clearance
+- Any activity restrictions or modifications
+- Clearance level (full, limited, not cleared)
+- Follow-up recommendations`;
 
 const ENCOUNTER_TYPE_CONFIG: Record<EncounterType, EncounterTypeConfig> = {
   daily_care: {
     label: "Daily Care / Treatment",
     description: "Routine treatment and therapy sessions",
     defaultFormat: "summary",
-    placeholder: "Document the treatment provided, patient response, any observations...\n\nExample:\nTreatment: 15 min ice, 10 min e-stim to R knee\nResponse: Patient reports 2/10 pain post-treatment (down from 4/10)\nNotes: Continue current protocol, reassess in 2 days",
+    placeholders: {
+      summary: SUMMARY_PLACEHOLDER,
+    },
   },
   soap_followup: {
     label: "Follow-Up / Progress Note",
@@ -44,7 +77,16 @@ const ENCOUNTER_TYPE_CONFIG: Record<EncounterType, EncounterTypeConfig> = {
       { value: "soap", label: "SOAP Note" },
       { value: "summary", label: "Summary" },
     ],
-    placeholder: "Document the follow-up assessment...\n\nSOAP format will be structured as:\n\nSUBJECTIVE:\n[Patient's reported symptoms, pain levels, how they're feeling]\n\nOBJECTIVE:\n[Clinical findings, ROM, strength testing, observations]\n\nASSESSMENT:\n[Clinical impression, progress status]\n\nPLAN:\n[Treatment plan, exercises, follow-up schedule]",
+    placeholders: {
+      soap: SOAP_PLACEHOLDER,
+      summary: `Document the follow-up assessment...
+
+Example:
+Status: Athlete reports improved pain, now 3/10 at rest
+Treatment provided: ROM exercises, ice, e-stim
+Progress: Range of motion improving, strength at 4/5
+Next steps: Continue current protocol, increase activity as tolerated`,
+    },
   },
   initial_eval: {
     label: "Initial Evaluation",
@@ -54,13 +96,34 @@ const ENCOUNTER_TYPE_CONFIG: Record<EncounterType, EncounterTypeConfig> = {
       { value: "soap", label: "SOAP Note" },
       { value: "summary", label: "Summary" },
     ],
-    placeholder: "Document the initial evaluation...\n\nSOAP format will be structured as:\n\nSUBJECTIVE:\n[Chief complaint, mechanism of injury, pain description, history]\n\nOBJECTIVE:\n[Physical exam findings, special tests, ROM, strength, palpation]\n\nASSESSMENT:\n[Working diagnosis, differential diagnoses]\n\nPLAN:\n[Treatment plan, referrals, activity modifications, follow-up]",
+    placeholders: {
+      soap: `Document the initial evaluation using SOAP format:
+
+SUBJECTIVE:
+[Chief complaint, mechanism of injury, pain description, history]
+
+OBJECTIVE:
+[Physical exam findings, special tests, ROM, strength, palpation]
+
+ASSESSMENT:
+[Working diagnosis, differential diagnoses]
+
+PLAN:
+[Treatment plan, referrals, activity modifications, follow-up]`,
+      summary: `Document the initial evaluation...
+
+Example:
+Injury: Right knee pain following non-contact twist during practice
+Mechanism: Planted foot, rotated, felt pop
+Findings: Mild swelling, positive Lachman, ROM limited
+Plan: X-ray ordered, refer to ortho, crutches and ice protocol`,
+    },
   },
   rehab_program: {
     label: "Rehab / Exercise Program",
     description: "Create exercise program linked to an injury",
     defaultFormat: "summary",
-    placeholder: "",
+    placeholders: {},
     isRehabProgram: true,
   },
   rtp_clearance: {
@@ -72,13 +135,25 @@ const ENCOUNTER_TYPE_CONFIG: Record<EncounterType, EncounterTypeConfig> = {
       { value: "soap", label: "SOAP Note" },
       { value: "summary", label: "Summary" },
     ],
-    placeholder: "Document the return-to-play assessment...\n\nInclude:\n- Current status and functional testing results\n- Criteria met for clearance\n- Any activity restrictions or modifications\n- Clearance level (full, limited, not cleared)\n- Follow-up recommendations",
+    placeholders: {
+      rtp_form: RTP_PLACEHOLDER,
+      soap: SOAP_PLACEHOLDER,
+      summary: `Document the return-to-play assessment...
+
+Example:
+Status: Athlete has completed all rehab protocols
+Testing: Full ROM, strength 5/5 bilateral, passed functional testing
+Clearance: Full clearance granted for return to sport
+Follow-up: Monitor during first week back, reassess PRN`,
+    },
   },
   other: {
     label: "Other Documentation",
     description: "General notes and documentation",
     defaultFormat: "summary",
-    placeholder: "Enter your documentation...",
+    placeholders: {
+      summary: "Enter your documentation...",
+    },
   },
 };
 
@@ -366,7 +441,7 @@ PLAN:
             <textarea
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
-              placeholder={currentConfig.placeholder}
+              placeholder={currentConfig.placeholders[noteFormat] || currentConfig.placeholders[currentConfig.defaultFormat] || "Enter your documentation..."}
               className="w-full min-h-[400px] rounded-md border border-slate-200 px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y font-mono"
             />
           </div>
