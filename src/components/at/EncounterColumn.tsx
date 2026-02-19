@@ -39,7 +39,7 @@ export default function EncounterColumn() {
 
   if (!selectedAthleteId) {
     return (
-      <div className="flex h-full w-80 flex-col border-r border-slate-200 bg-slate-50">
+      <div className="flex h-full w-full flex-col border-r border-slate-200 bg-slate-50">
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
           <User className="h-12 w-12 text-slate-300 mb-3" />
           <p className="text-sm font-medium text-slate-600">Select an Athlete</p>
@@ -78,7 +78,7 @@ export default function EncounterColumn() {
   };
 
   return (
-    <div className="flex h-full w-80 flex-col border-r border-slate-200 bg-white">
+    <div className="flex h-full w-full flex-col border-r border-slate-200 bg-white">
       {/* Athlete Header */}
       <div className="border-b border-slate-200 p-4">
         <button
@@ -134,7 +134,7 @@ export default function EncounterColumn() {
           variant={viewMode === "new-encounter" ? "default" : "outline"}
         >
           <Plus className="mr-1 h-4 w-4" />
-          New Encounter
+          New Document
         </Button>
         <Button
           onClick={handleViewProfile}
@@ -167,7 +167,7 @@ export default function EncounterColumn() {
               className="mt-3"
             >
               <Plus className="mr-1 h-4 w-4" />
-              Create First Encounter
+              Create First Document
             </Button>
           </div>
         ) : (

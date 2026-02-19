@@ -58,7 +58,7 @@ export default function RosterColumn() {
   };
 
   return (
-    <div className="flex h-full w-72 flex-col border-r border-slate-200 bg-white">
+    <div className="flex h-full w-full flex-col border-r border-slate-200 bg-white">
       {/* Team Selector Header */}
       <div className="border-b border-slate-200 p-3">
         <div className="relative">

@@ -10,20 +10,74 @@ import {
   Mic,
   MicOff,
   FileText,
-  Activity,
   Save,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
 
-const ENCOUNTER_TYPES = [
-  { value: "daily_care", label: "Daily Care / Treatment" },
-  { value: "soap_followup", label: "SOAP Follow-Up" },
-  { value: "initial_eval", label: "Initial Evaluation" },
-  { value: "rtp_clearance", label: "Return-to-Play Clearance" },
-  { value: "other", label: "Other" },
-];
+type EncounterType = "daily_care" | "soap_followup" | "initial_eval" | "rtp_clearance" | "other";
+type NoteFormat = "summary" | "soap" | "rtp_form";
+
+interface EncounterTypeConfig {
+  label: string;
+  description: string;
+  defaultFormat: NoteFormat;
+  formatOptions?: { value: NoteFormat; label: string }[];
+  placeholder: string;
+}
+
+const ENCOUNTER_TYPE_CONFIG: Record<EncounterType, EncounterTypeConfig> = {
+  daily_care: {
+    label: "Daily Care / Treatment",
+    description: "Routine treatment and therapy sessions",
+    defaultFormat: "summary",
+    placeholder: "Document the treatment provided, patient response, any observations...\n\nExample:\nTreatment: 15 min ice, 10 min e-stim to R knee\nResponse: Patient reports 2/10 pain post-treatment (down from 4/10)\nNotes: Continue current protocol, reassess in 2 days",
+  },
+  soap_followup: {
+    label: "Follow-Up / Progress Note",
+    description: "Check-in on existing injury progress",
+    defaultFormat: "soap",
+    formatOptions: [
+      { value: "soap", label: "SOAP Note" },
+      { value: "summary", label: "Summary" },
+    ],
+    placeholder: "Document the follow-up assessment...\n\nSOAP format will be structured as:\n\nSUBJECTIVE:\n[Patient's reported symptoms, pain levels, how they're feeling]\n\nOBJECTIVE:\n[Clinical findings, ROM, strength testing, observations]\n\nASSESSMENT:\n[Clinical impression, progress status]\n\nPLAN:\n[Treatment plan, exercises, follow-up schedule]",
+  },
+  initial_eval: {
+    label: "Initial Evaluation",
+    description: "First assessment of a new injury or condition",
+    defaultFormat: "soap",
+    formatOptions: [
+      { value: "soap", label: "SOAP Note" },
+      { value: "summary", label: "Summary" },
+    ],
+    placeholder: "Document the initial evaluation...\n\nSOAP format will be structured as:\n\nSUBJECTIVE:\n[Chief complaint, mechanism of injury, pain description, history]\n\nOBJECTIVE:\n[Physical exam findings, special tests, ROM, strength, palpation]\n\nASSESSMENT:\n[Working diagnosis, differential diagnoses]\n\nPLAN:\n[Treatment plan, referrals, activity modifications, follow-up]",
+  },
+  rtp_clearance: {
+    label: "Return-to-Play Clearance",
+    description: "Final clearance assessment",
+    defaultFormat: "rtp_form",
+    formatOptions: [
+      { value: "rtp_form", label: "RTP Clearance Form" },
+      { value: "soap", label: "SOAP Note" },
+      { value: "summary", label: "Summary" },
+    ],
+    placeholder: "Document the return-to-play assessment...\n\nInclude:\n- Current status and functional testing results\n- Criteria met for clearance\n- Any activity restrictions or modifications\n- Clearance level (full, limited, not cleared)\n- Follow-up recommendations",
+  },
+  other: {
+    label: "Other Documentation",
+    description: "General notes and documentation",
+    defaultFormat: "summary",
+    placeholder: "Enter your documentation...",
+  },
+};
+
+const ENCOUNTER_TYPES = Object.entries(ENCOUNTER_TYPE_CONFIG).map(([value, config]) => ({
+  value,
+  label: config.label,
+}));
 
 export default function NewEncounterForm() {
   const {
@@ -45,14 +99,20 @@ export default function NewEncounterForm() {
   const createEncounter = useMutation(api.encounters.create);
 
   // Form state
-  const [encounterType, setEncounterType] = useState("daily_care");
+  const [encounterType, setEncounterType] = useState<EncounterType>("daily_care");
+  const [noteFormat, setNoteFormat] = useState<NoteFormat>("summary");
   const [injuryId, setInjuryId] = useState<Id<"injuries"> | "">("");
-  const [subjectiveText, setSubjectiveText] = useState("");
-  const [objectiveText, setObjectiveText] = useState("");
-  const [assessmentText, setAssessmentText] = useState("");
-  const [planText, setPlanText] = useState("");
+  const [noteContent, setNoteContent] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const currentConfig = ENCOUNTER_TYPE_CONFIG[encounterType];
+
+  // Update format when encounter type changes
+  const handleEncounterTypeChange = (type: EncounterType) => {
+    setEncounterType(type);
+    setNoteFormat(ENCOUNTER_TYPE_CONFIG[type].defaultFormat);
+  };
 
   const handleBackToProfile = () => {
     setViewMode("profile");
@@ -63,30 +123,48 @@ export default function NewEncounterForm() {
 
     if (!selectedAthleteId) return;
 
-    // Require at least some content
-    if (!subjectiveText && !objectiveText && !assessmentText && !planText) {
-      toast.error("Please add at least some clinical notes");
+    if (!noteContent.trim()) {
+      toast.error("Please add some documentation");
       return;
     }
 
     setIsSaving(true);
     try {
+      // Parse content based on format
+      let subjectiveText: string | undefined;
+      let objectiveText: string | undefined;
+      let assessmentText: string | undefined;
+      let planText: string | undefined;
+
+      if (noteFormat === "soap") {
+        // Try to parse SOAP sections from the content
+        const sections = parseSOAPContent(noteContent);
+        subjectiveText = sections.subjective || undefined;
+        objectiveText = sections.objective || undefined;
+        assessmentText = sections.assessment || undefined;
+        planText = sections.plan || undefined;
+      } else {
+        // For summary format, put everything in subjective for now
+        // This will be stored as a general note
+        subjectiveText = noteContent;
+      }
+
       const encounterId = await createEncounter({
         athleteId: selectedAthleteId,
-        encounterType: encounterType as "daily_care" | "soap_followup" | "initial_eval" | "rtp_clearance" | "other",
+        encounterType,
         injuryId: injuryId ? (injuryId as Id<"injuries">) : undefined,
-        subjectiveText: subjectiveText || undefined,
-        objectiveText: objectiveText || undefined,
-        assessmentText: assessmentText || undefined,
-        planText: planText || undefined,
+        subjectiveText,
+        objectiveText,
+        assessmentText,
+        planText,
         aiGenerated: false,
       });
 
-      toast.success("Encounter saved successfully");
+      toast.success("Document saved successfully");
       setSelectedEncounterId(encounterId);
       setViewMode("encounter");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to save encounter";
+      const message = error instanceof Error ? error.message : "Failed to save document";
       toast.error(message);
     } finally {
       setIsSaving(false);
@@ -103,6 +181,23 @@ export default function NewEncounterForm() {
     }
   };
 
+  // Insert SOAP template into the note content
+  const insertSOAPTemplate = () => {
+    const template = `SUBJECTIVE:
+
+
+OBJECTIVE:
+
+
+ASSESSMENT:
+
+
+PLAN:
+
+`;
+    setNoteContent(template);
+  };
+
   if (!athlete) {
     return (
       <div className="flex-1 flex items-center justify-center bg-slate-50">
@@ -114,8 +209,8 @@ export default function NewEncounterForm() {
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-5">
-        <div className="flex items-center gap-3 mb-4">
+      <div className="bg-white border-b border-slate-200 px-6 py-4">
+        <div className="flex items-center gap-3 mb-3">
           <Button
             variant="ghost"
             size="sm"
@@ -129,8 +224,8 @@ export default function NewEncounterForm() {
 
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">New Encounter</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-xl font-semibold text-slate-900">New Document</h1>
+            <p className="text-muted-foreground mt-0.5">
               Documenting for {athlete.firstName} {athlete.lastName}
             </p>
           </div>
@@ -169,112 +264,107 @@ export default function NewEncounterForm() {
           </div>
         )}
 
-        {/* Encounter Type & Injury Selection */}
-        <div className="grid gap-4 md:grid-cols-2 mb-6">
+        {/* Encounter Type & Format Selection */}
+        <div className="grid gap-4 md:grid-cols-3 mb-6">
           <div>
-            <Label htmlFor="encounterType">Encounter Type</Label>
+            <Label htmlFor="encounterType">Document Type</Label>
             <Select
               value={encounterType}
-              onChange={(e) => setEncounterType(e.target.value)}
+              onChange={(e) => handleEncounterTypeChange(e.target.value as EncounterType)}
               options={ENCOUNTER_TYPES}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {currentConfig.description}
+            </p>
           </div>
+
+          {currentConfig.formatOptions && (
+            <div>
+              <Label htmlFor="noteFormat">Format</Label>
+              <div className="relative">
+                <select
+                  id="noteFormat"
+                  value={noteFormat}
+                  onChange={(e) => setNoteFormat(e.target.value as NoteFormat)}
+                  className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  {currentConfig.formatOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
+          )}
+
           <div>
             <Label htmlFor="injuryId">Related Injury (Optional)</Label>
-            <select
-              id="injuryId"
-              value={injuryId}
-              onChange={(e) => setInjuryId(e.target.value as Id<"injuries"> | "")}
-              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            >
-              <option value="">No specific injury</option>
-              {activeInjuries?.map((injury) => (
-                <option key={injury._id} value={injury._id}>
-                  {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
-                  {injury.diagnosis && ` - ${injury.diagnosis}`}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                id="injuryId"
+                value={injuryId}
+                onChange={(e) => setInjuryId(e.target.value as Id<"injuries"> | "")}
+                className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">No specific injury</option>
+                {activeInjuries?.map((injury) => (
+                  <option key={injury._id} value={injury._id}>
+                    {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
+                    {injury.diagnosis && ` - ${injury.diagnosis}`}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            </div>
           </div>
         </div>
 
-        {/* SOAP Sections */}
-        <div className="space-y-6">
-          {/* Subjective */}
-          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-            <div className="border-b border-slate-200 px-5 py-3 bg-blue-50 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-blue-600" />
+        {/* Single Note Entry Box */}
+        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+          <div className="border-b border-slate-200 px-5 py-3 bg-slate-50 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-slate-500" />
               <div>
-                <h2 className="font-semibold text-blue-900">Subjective</h2>
-                <p className="text-xs text-blue-600">Patient's description, symptoms, and history</p>
+                <h2 className="font-semibold text-slate-900">
+                  {noteFormat === "soap" ? "SOAP Note" : noteFormat === "rtp_form" ? "RTP Clearance" : "Documentation"}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {noteFormat === "soap"
+                    ? "Include SUBJECTIVE, OBJECTIVE, ASSESSMENT, PLAN headers"
+                    : "Enter your clinical notes below"}
+                </p>
               </div>
             </div>
-            <div className="p-4">
-              <textarea
-                value={subjectiveText}
-                onChange={(e) => setSubjectiveText(e.target.value)}
-                placeholder="Chief complaint, history of present illness, pain levels, patient's description of symptoms..."
-                className="w-full min-h-[120px] rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y"
-              />
-            </div>
+            {noteFormat === "soap" && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={insertSOAPTemplate}
+                className="text-xs"
+              >
+                Insert Template
+              </Button>
+            )}
           </div>
+          <div className="p-4">
+            <textarea
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              placeholder={currentConfig.placeholder}
+              className="w-full min-h-[400px] rounded-md border border-slate-200 px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y font-mono"
+            />
+          </div>
+        </div>
 
-          {/* Objective */}
-          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-            <div className="border-b border-slate-200 px-5 py-3 bg-green-50 flex items-center gap-2">
-              <Activity className="h-4 w-4 text-green-600" />
-              <div>
-                <h2 className="font-semibold text-green-900">Objective</h2>
-                <p className="text-xs text-green-600">Clinical findings, measurements, and observations</p>
-              </div>
-            </div>
-            <div className="p-4">
-              <textarea
-                value={objectiveText}
-                onChange={(e) => setObjectiveText(e.target.value)}
-                placeholder="Physical exam findings, ROM measurements, strength testing, palpation findings, special tests..."
-                className="w-full min-h-[120px] rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y"
-              />
-            </div>
-          </div>
-
-          {/* Assessment */}
-          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-            <div className="border-b border-slate-200 px-5 py-3 bg-amber-50 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-amber-600" />
-              <div>
-                <h2 className="font-semibold text-amber-900">Assessment</h2>
-                <p className="text-xs text-amber-600">Clinical impression and diagnosis</p>
-              </div>
-            </div>
-            <div className="p-4">
-              <textarea
-                value={assessmentText}
-                onChange={(e) => setAssessmentText(e.target.value)}
-                placeholder="Working diagnosis, differential diagnoses, clinical impression, prognosis..."
-                className="w-full min-h-[100px] rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y"
-              />
-            </div>
-          </div>
-
-          {/* Plan */}
-          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-            <div className="border-b border-slate-200 px-5 py-3 bg-purple-50 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-purple-600" />
-              <div>
-                <h2 className="font-semibold text-purple-900">Plan</h2>
-                <p className="text-xs text-purple-600">Treatment plan, referrals, and follow-up</p>
-              </div>
-            </div>
-            <div className="p-4">
-              <textarea
-                value={planText}
-                onChange={(e) => setPlanText(e.target.value)}
-                placeholder="Treatment provided, modalities used, exercises prescribed, return-to-play guidelines, follow-up instructions..."
-                className="w-full min-h-[120px] rounded-md border border-slate-200 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y"
-              />
-            </div>
-          </div>
+        {/* Hint */}
+        <div className="mt-4 rounded-lg bg-blue-50 border border-blue-100 px-4 py-3">
+          <p className="text-sm text-blue-700">
+            <strong>Tip:</strong> Use the voice recording feature to dictate your notes hands-free.
+            AI will help format your transcribed audio into the selected format.
+          </p>
         </div>
 
         {/* Actions */}
@@ -286,7 +376,7 @@ export default function NewEncounterForm() {
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSaving}>
+          <Button type="submit" disabled={isSaving || !noteContent.trim()}>
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -295,7 +385,7 @@ export default function NewEncounterForm() {
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                Save Encounter
+                Save Document
               </>
             )}
           </Button>
@@ -303,4 +393,73 @@ export default function NewEncounterForm() {
       </form>
     </div>
   );
+}
+
+// Helper function to parse SOAP content from a single text block
+function parseSOAPContent(content: string): {
+  subjective?: string;
+  objective?: string;
+  assessment?: string;
+  plan?: string;
+} {
+  const result: {
+    subjective?: string;
+    objective?: string;
+    assessment?: string;
+    plan?: string;
+  } = {};
+
+  // Define section patterns
+  const patterns = [
+    { key: "subjective" as const, regex: /SUBJECTIVE:?\s*/i },
+    { key: "objective" as const, regex: /OBJECTIVE:?\s*/i },
+    { key: "assessment" as const, regex: /ASSESSMENT:?\s*/i },
+    { key: "plan" as const, regex: /PLAN:?\s*/i },
+  ];
+
+  // Find positions of each section
+  const positions: { key: keyof typeof result; start: number; end: number }[] = [];
+
+  patterns.forEach(({ key, regex }) => {
+    const match = content.match(regex);
+    if (match && match.index !== undefined) {
+      positions.push({
+        key,
+        start: match.index + match[0].length,
+        end: content.length,
+      });
+    }
+  });
+
+  // Sort by position
+  positions.sort((a, b) => a.start - b.start);
+
+  // Set end positions based on next section start
+  for (let i = 0; i < positions.length - 1; i++) {
+    positions[i].end = positions[i + 1].start - patterns.find(p => p.key === positions[i + 1].key)!.regex.toString().length + 10;
+  }
+
+  // Recalculate ends more accurately
+  for (let i = 0; i < positions.length; i++) {
+    if (i < positions.length - 1) {
+      // Find the start of the next section header
+      const nextPattern = patterns.find(p => p.key === positions[i + 1].key);
+      if (nextPattern) {
+        const nextMatch = content.slice(positions[i].start).match(nextPattern.regex);
+        if (nextMatch && nextMatch.index !== undefined) {
+          positions[i].end = positions[i].start + nextMatch.index;
+        }
+      }
+    }
+  }
+
+  // Extract content for each section
+  positions.forEach(({ key, start, end }) => {
+    const sectionContent = content.slice(start, end).trim();
+    if (sectionContent) {
+      result[key] = sectionContent;
+    }
+  });
+
+  return result;
 }
