@@ -9,18 +9,17 @@ import {
   Mail,
   Calendar,
   Ruler,
-  Weight,
   AlertCircle,
   Activity,
   FileText,
-  Heart,
   Shield,
   Plus,
   Clock,
   Dumbbell,
   ChevronDown,
+  ChevronRight,
   Edit,
-  Pill,
+  Heart,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import EditAthleteForm from "./EditAthleteForm";
@@ -31,6 +30,14 @@ export default function AthleteProfile() {
   const { selectedAthleteId, setViewMode, setSelectedEncounterId } = useATContext();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    personal: true,
+    emergency: false,
+    medical: false,
+    insurance: false,
+  });
 
   const athlete = useQuery(
     api.athletes.getById,
@@ -99,6 +106,13 @@ export default function AthleteProfile() {
     }
   };
 
+  const toggleSection = (section: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
   // Get current availability status (defaults to healthy if not set)
   const currentStatus: AvailabilityStatus = athlete?.availabilityStatus ?? "healthy";
 
@@ -112,6 +126,11 @@ export default function AthleteProfile() {
         return "bg-red-100 text-red-700 border-red-200";
     }
   };
+
+  // Check if sections have data
+  const hasEmergencyContact = athlete.emergencyContactName || athlete.emergencyContact2Name;
+  const hasMedicalInfo = athlete.allergies || athlete.medications || athlete.medicalConditions || athlete.previousSurgeries || athlete.previousInjuries;
+  const hasInsurance = athlete.insuranceProvider || athlete.insurancePolicyNumber;
 
   // Show edit form if editing
   if (isEditingProfile && selectedAthleteId) {
@@ -158,10 +177,6 @@ export default function AthleteProfile() {
               </select>
               <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60" />
             </div>
-            <Button variant="outline" onClick={() => setIsEditingProfile(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Profile
-            </Button>
             <Button onClick={handleNewEncounter}>
               <Plus className="mr-2 h-4 w-4" />
               New Encounter
@@ -201,113 +216,7 @@ export default function AthleteProfile() {
 
       {/* Content Grid */}
       <div className="p-6 grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Basic Info */}
-        <div className="space-y-6">
-          {/* Personal Information */}
-          <div className="rounded-xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-200 px-5 py-3">
-              <h2 className="font-semibold text-slate-900 flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Personal Information
-              </h2>
-            </div>
-            <div className="p-5 space-y-3">
-              {athlete.email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{athlete.email}</span>
-                </div>
-              )}
-              {athlete.dateOfBirth && (
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    {new Date(athlete.dateOfBirth).toLocaleDateString()}
-                    {athlete.sex && ` • ${athlete.sex === "M" ? "Male" : athlete.sex === "F" ? "Female" : "Other"}`}
-                  </span>
-                </div>
-              )}
-              {athlete.heightInches && (
-                <div className="flex items-center gap-3">
-                  <Ruler className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{formatHeight(athlete.heightInches)}</span>
-                </div>
-              )}
-              {athlete.weightLbs && (
-                <div className="flex items-center gap-3">
-                  <Weight className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{athlete.weightLbs} lbs</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Emergency Contact */}
-          {athlete.emergencyContactName && (
-            <div className="rounded-xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-200 px-5 py-3">
-                <h2 className="font-semibold text-slate-900 flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  Emergency Contact
-                </h2>
-              </div>
-              <div className="p-5">
-                <p className="font-medium text-slate-900">{athlete.emergencyContactName}</p>
-                {athlete.emergencyContactPhone && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {athlete.emergencyContactPhone}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Medical Info */}
-          {(athlete.allergies || athlete.medications || athlete.medicalConditions) && (
-            <div className="rounded-xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-200 px-5 py-3">
-                <h2 className="font-semibold text-slate-900 flex items-center gap-2">
-                  <Pill className="h-4 w-4 text-red-500" />
-                  Medical Info
-                </h2>
-              </div>
-              <div className="p-5 space-y-3">
-                {athlete.allergies && (
-                  <div>
-                    <p className="text-xs font-medium text-red-600 uppercase">Allergies</p>
-                    <p className="text-sm text-slate-600 mt-0.5">{athlete.allergies}</p>
-                  </div>
-                )}
-                {athlete.medications && (
-                  <div>
-                    <p className="text-xs font-medium text-blue-600 uppercase">Medications</p>
-                    <p className="text-sm text-slate-600 mt-0.5">{athlete.medications}</p>
-                  </div>
-                )}
-                {athlete.medicalConditions && (
-                  <div>
-                    <p className="text-xs font-medium text-amber-600 uppercase">Conditions</p>
-                    <p className="text-sm text-slate-600 mt-0.5">{athlete.medicalConditions}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
-          {athlete.notes && (
-            <div className="rounded-xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-200 px-5 py-3">
-                <h2 className="font-semibold text-slate-900">Notes</h2>
-              </div>
-              <div className="p-5">
-                <p className="text-sm text-slate-600 whitespace-pre-wrap">{athlete.notes}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Middle Column - Injuries */}
+        {/* Left Column - Injuries & Rehab */}
         <div className="space-y-6">
           {/* Active Injuries */}
           <div className="rounded-xl border border-slate-200 bg-white">
@@ -381,11 +290,6 @@ export default function AthleteProfile() {
                       Create Program
                     </Button>
                   )}
-                  {activeInjuries.length === 0 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Document an injury first to create a program
-                    </p>
-                  )}
                 </div>
               ) : (
                 rehabPrograms.map((program) => (
@@ -418,11 +322,6 @@ export default function AthleteProfile() {
                               {exercise.durationMinutes && `${exercise.durationMinutes} min`}
                             </span>
                           </div>
-                          {exercise.frequency && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {exercise.frequency}
-                            </p>
-                          )}
                         </div>
                       ))}
                       {program.exercises.length > 3 && (
@@ -473,7 +372,7 @@ export default function AthleteProfile() {
           )}
         </div>
 
-        {/* Right Column - Recent Encounters */}
+        {/* Middle Column - Recent Encounters */}
         <div className="space-y-6">
           <div className="rounded-xl border border-slate-200 bg-white">
             <div className="border-b border-slate-200 px-5 py-3 flex items-center justify-between">
@@ -536,34 +435,271 @@ export default function AthleteProfile() {
               )}
             </div>
           </div>
+        </div>
 
-          {/* Medical History Summary */}
-          <div className="rounded-xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-200 px-5 py-3">
+        {/* Right Column - Athlete Information Box */}
+        <div className="space-y-6">
+          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+            {/* Header with Edit Button */}
+            <div className="border-b border-slate-200 px-5 py-3 flex items-center justify-between bg-slate-50">
               <h2 className="font-semibold text-slate-900 flex items-center gap-2">
-                <Heart className="h-4 w-4 text-red-500" />
-                Medical Summary
+                <User className="h-4 w-4" />
+                Athlete Information
               </h2>
+              <Button variant="ghost" size="sm" onClick={() => setIsEditingProfile(true)}>
+                <Edit className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
             </div>
-            <div className="p-5 space-y-3 text-sm">
-              <div>
-                <p className="font-medium text-slate-700">Total Injuries</p>
-                <p className="text-muted-foreground">{injuries?.length ?? 0} on record</p>
-              </div>
-              <div>
-                <p className="font-medium text-slate-700">Total Encounters</p>
-                <p className="text-muted-foreground">{encounters?.length ?? 0} documented</p>
-              </div>
-              {athlete.profileCompletedAt && (
-                <div>
-                  <p className="font-medium text-slate-700">Profile Completed</p>
-                  <p className="text-muted-foreground">
-                    {new Date(athlete.profileCompletedAt).toLocaleDateString()}
-                  </p>
+
+            {/* Personal Information - Always visible summary */}
+            <div className="border-b border-slate-100">
+              <button
+                onClick={() => toggleSection("personal")}
+                className="w-full px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
+              >
+                <span className="font-medium text-slate-700 flex items-center gap-2">
+                  <User className="h-4 w-4 text-blue-500" />
+                  Personal Info
+                </span>
+                {expandedSections.personal ? (
+                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                )}
+              </button>
+              {expandedSections.personal && (
+                <div className="px-5 pb-4 space-y-2">
+                  {athlete.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-slate-600">{athlete.email}</span>
+                    </div>
+                  )}
+                  {athlete.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-slate-600">{athlete.phone}</span>
+                    </div>
+                  )}
+                  {athlete.dateOfBirth && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-slate-600">
+                        {new Date(athlete.dateOfBirth).toLocaleDateString()}
+                        {athlete.sex && ` • ${athlete.sex === "M" ? "Male" : athlete.sex === "F" ? "Female" : "Other"}`}
+                      </span>
+                    </div>
+                  )}
+                  {(athlete.heightInches || athlete.weightLbs) && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-slate-600">
+                        {athlete.heightInches && formatHeight(athlete.heightInches)}
+                        {athlete.heightInches && athlete.weightLbs && " • "}
+                        {athlete.weightLbs && `${athlete.weightLbs} lbs`}
+                      </span>
+                    </div>
+                  )}
+                  {!athlete.email && !athlete.phone && !athlete.dateOfBirth && !athlete.heightInches && !athlete.weightLbs && (
+                    <p className="text-sm text-muted-foreground italic">No personal info on file</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="border-b border-slate-100">
+              <button
+                onClick={() => toggleSection("emergency")}
+                className="w-full px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
+              >
+                <span className="font-medium text-slate-700 flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-amber-500" />
+                  Emergency Contact
+                  {hasEmergencyContact && (
+                    <span className="text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded">On file</span>
+                  )}
+                </span>
+                {expandedSections.emergency ? (
+                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                )}
+              </button>
+              {expandedSections.emergency && (
+                <div className="px-5 pb-4 space-y-3">
+                  {athlete.emergencyContactName ? (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase">Primary</p>
+                      <p className="font-medium text-slate-900">{athlete.emergencyContactName}</p>
+                      {athlete.emergencyContactPhone && (
+                        <p className="text-sm text-slate-600">{athlete.emergencyContactPhone}</p>
+                      )}
+                      {athlete.emergencyContactRelationship && (
+                        <p className="text-xs text-muted-foreground">{athlete.emergencyContactRelationship}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No emergency contact on file</p>
+                  )}
+                  {athlete.emergencyContact2Name && (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase">Secondary</p>
+                      <p className="font-medium text-slate-900">{athlete.emergencyContact2Name}</p>
+                      {athlete.emergencyContact2Phone && (
+                        <p className="text-sm text-slate-600">{athlete.emergencyContact2Phone}</p>
+                      )}
+                      {athlete.emergencyContact2Relationship && (
+                        <p className="text-xs text-muted-foreground">{athlete.emergencyContact2Relationship}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Medical Info */}
+            <div className="border-b border-slate-100">
+              <button
+                onClick={() => toggleSection("medical")}
+                className="w-full px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
+              >
+                <span className="font-medium text-slate-700 flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-red-500" />
+                  Medical Info
+                  {hasMedicalInfo && (
+                    <span className="text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded">On file</span>
+                  )}
+                </span>
+                {expandedSections.medical ? (
+                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                )}
+              </button>
+              {expandedSections.medical && (
+                <div className="px-5 pb-4 space-y-3">
+                  {athlete.allergies && (
+                    <div>
+                      <p className="text-xs font-medium text-red-600 uppercase">Allergies</p>
+                      <p className="text-sm text-slate-600">{athlete.allergies}</p>
+                    </div>
+                  )}
+                  {athlete.medications && (
+                    <div>
+                      <p className="text-xs font-medium text-blue-600 uppercase">Medications</p>
+                      <p className="text-sm text-slate-600">{athlete.medications}</p>
+                    </div>
+                  )}
+                  {athlete.medicalConditions && (
+                    <div>
+                      <p className="text-xs font-medium text-amber-600 uppercase">Conditions</p>
+                      <p className="text-sm text-slate-600">{athlete.medicalConditions}</p>
+                    </div>
+                  )}
+                  {athlete.previousSurgeries && (
+                    <div>
+                      <p className="text-xs font-medium text-purple-600 uppercase">Previous Surgeries</p>
+                      <p className="text-sm text-slate-600">{athlete.previousSurgeries}</p>
+                    </div>
+                  )}
+                  {athlete.previousInjuries && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 uppercase">Previous Injuries</p>
+                      <p className="text-sm text-slate-600">{athlete.previousInjuries}</p>
+                    </div>
+                  )}
+                  {athlete.primaryPhysicianName && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 uppercase">Primary Physician</p>
+                      <p className="text-sm text-slate-600">{athlete.primaryPhysicianName}</p>
+                      {athlete.primaryPhysicianPhone && (
+                        <p className="text-xs text-muted-foreground">{athlete.primaryPhysicianPhone}</p>
+                      )}
+                    </div>
+                  )}
+                  {!hasMedicalInfo && !athlete.primaryPhysicianName && (
+                    <p className="text-sm text-muted-foreground italic">No medical info on file</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Insurance Info */}
+            <div>
+              <button
+                onClick={() => toggleSection("insurance")}
+                className="w-full px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
+              >
+                <span className="font-medium text-slate-700 flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-purple-500" />
+                  Insurance
+                  {hasInsurance && (
+                    <span className="text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded">On file</span>
+                  )}
+                </span>
+                {expandedSections.insurance ? (
+                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                )}
+              </button>
+              {expandedSections.insurance && (
+                <div className="px-5 pb-4 space-y-2">
+                  {athlete.insuranceProvider ? (
+                    <>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase">Provider</p>
+                        <p className="text-sm font-medium text-slate-900">{athlete.insuranceProvider}</p>
+                      </div>
+                      {athlete.insurancePolicyNumber && (
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase">Policy #</p>
+                          <p className="text-sm text-slate-600">{athlete.insurancePolicyNumber}</p>
+                        </div>
+                      )}
+                      {athlete.insuranceGroupNumber && (
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase">Group #</p>
+                          <p className="text-sm text-slate-600">{athlete.insuranceGroupNumber}</p>
+                        </div>
+                      )}
+                      {athlete.insurancePhone && (
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase">Phone</p>
+                          <p className="text-sm text-slate-600">{athlete.insurancePhone}</p>
+                        </div>
+                      )}
+                      {athlete.policyHolderName && (
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase">Policy Holder</p>
+                          <p className="text-sm text-slate-600">
+                            {athlete.policyHolderName}
+                            {athlete.policyHolderRelationship && ` (${athlete.policyHolderRelationship})`}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No insurance info on file</p>
+                  )}
                 </div>
               )}
             </div>
           </div>
+
+          {/* Notes section if present */}
+          {athlete.notes && (
+            <div className="rounded-xl border border-slate-200 bg-white">
+              <div className="border-b border-slate-200 px-5 py-3">
+                <h2 className="font-semibold text-slate-900">Notes</h2>
+              </div>
+              <div className="p-5">
+                <p className="text-sm text-slate-600 whitespace-pre-wrap">{athlete.notes}</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
