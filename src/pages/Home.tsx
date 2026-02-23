@@ -143,6 +143,27 @@ export default function Home() {
                 </a>
               </Button>
             </div>
+
+            {/* Temporary Dev Access - Portal Quick Links */}
+            <div className="mt-6 border-t border-slate-200 pt-6">
+              <p className="text-xs text-amber-600 font-medium mb-3">
+                DEV MODE - Quick Portal Access
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/org">Admin Portal</Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/at">AT Portal</Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/athlete">Athlete Portal</Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/login">Login</Link>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
