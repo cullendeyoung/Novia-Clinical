@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useATContext } from "@/contexts/ATContext";
@@ -15,8 +16,12 @@ import {
   UserMinus,
 } from "lucide-react";
 import type { Id } from "../../../convex/_generated/dataModel";
+import AllEncounters from "./AllEncounters";
+
+type TeamOverviewView = "overview" | "all-encounters";
 
 export default function TeamOverview() {
+  const [currentView, setCurrentView] = useState<TeamOverviewView>("overview");
   const {
     selectedTeamId,
     setSelectedTeamId,
@@ -129,6 +134,11 @@ export default function TeamOverview() {
     if (status === "limited") return "bg-yellow-100 text-yellow-700";
     return "bg-green-100 text-green-700";
   };
+
+  // Show AllEncounters view if selected
+  if (currentView === "all-encounters") {
+    return <AllEncounters onBack={() => setCurrentView("overview")} />;
+  }
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50">
@@ -320,7 +330,7 @@ export default function TeamOverview() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setCurrentPage("emr")}
+                  onClick={() => setCurrentView("all-encounters")}
                 >
                   View All <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
