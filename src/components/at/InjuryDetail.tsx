@@ -16,6 +16,7 @@ import {
   FileText,
   AlertCircle,
   CheckCircle2,
+  Dumbbell,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -45,6 +46,12 @@ export default function InjuryDetail() {
   // Fetch encounters linked to this injury
   const injuryEncounters = useQuery(
     api.encounters.getByInjury,
+    selectedInjuryId ? { injuryId: selectedInjuryId } : "skip"
+  );
+
+  // Fetch rehab programs linked to this injury
+  const rehabPrograms = useQuery(
+    api.rehabPrograms.getByInjury,
     selectedInjuryId ? { injuryId: selectedInjuryId } : "skip"
   );
 
@@ -541,6 +548,76 @@ export default function InjuryDetail() {
                   </div>
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Rehab Programs */}
+        <div className="rounded-xl border border-slate-200 bg-white">
+          <div className="border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+            <h2 className="font-semibold text-slate-900 flex items-center gap-2">
+              <Dumbbell className="h-4 w-4 text-purple-500" />
+              Rehab Programs
+            </h2>
+            <span className="text-sm text-muted-foreground">
+              {rehabPrograms?.length || 0} programs
+            </span>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {!rehabPrograms ? (
+              <div className="p-5 text-center">
+                <Loader2 className="h-6 w-6 text-slate-300 mx-auto mb-2 animate-spin" />
+                <p className="text-sm text-muted-foreground">Loading...</p>
+              </div>
+            ) : rehabPrograms.length === 0 ? (
+              <div className="p-5 text-center">
+                <Dumbbell className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No rehab programs yet
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Create a rehab program from the athlete profile
+                </p>
+              </div>
+            ) : (
+              rehabPrograms.map((program) => (
+                <div
+                  key={program._id}
+                  className="px-5 py-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                        program.status === "active"
+                          ? "bg-purple-100 text-purple-600"
+                          : program.status === "completed"
+                            ? "bg-green-100 text-green-600"
+                            : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      <Dumbbell className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-slate-900">
+                        {program.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Started: {program.startDate} • {program.exerciseCount} exercises
+                      </p>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      program.status === "active"
+                        ? "bg-purple-100 text-purple-700"
+                        : program.status === "completed"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-slate-100 text-slate-700"
+                    }`}>
+                      {program.status}
+                    </span>
+                  </div>
+                </div>
               ))
             )}
           </div>
