@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useATContext } from "@/contexts/ATContext";
@@ -15,12 +14,8 @@ import {
   CheckCircle,
   Bell,
 } from "lucide-react";
-import MyEncounters from "./MyEncounters";
-
-type MyDashboardView = "dashboard" | "my-encounters";
 
 export default function MyDashboard() {
-  const [currentView, setCurrentView] = useState<MyDashboardView>("dashboard");
   const { setCurrentPage, setSelectedTeamId, setSelectedAthleteId, setViewMode } = useATContext();
 
   const currentUser = useQuery(api.users.getCurrent);
@@ -58,11 +53,6 @@ export default function MyDashboard() {
     setViewMode("start-document");
     setCurrentPage("emr");
   };
-
-  // Show MyEncounters view if selected
-  if (currentView === "my-encounters") {
-    return <MyEncounters onBack={() => setCurrentView("dashboard")} />;
-  }
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 p-6">
@@ -186,7 +176,7 @@ export default function MyDashboard() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setCurrentView("my-encounters")}
+                onClick={() => setCurrentPage("my-encounters")}
               >
                 View All <ChevronRight className="ml-1 h-4 w-4" />
               </Button>

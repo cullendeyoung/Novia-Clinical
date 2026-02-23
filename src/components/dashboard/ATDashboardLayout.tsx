@@ -12,6 +12,7 @@ import NoviaLogo from "@/components/ui/NoviaLogo";
 import MyDashboard from "@/components/at/MyDashboard";
 import TeamOverview from "@/components/at/TeamOverview";
 import EMRView from "@/components/at/EMRView";
+import MyEncounters from "@/components/at/MyEncounters";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS: { id: ATPage; label: string; icon: typeof LayoutDashboard }[] = [
@@ -82,6 +83,8 @@ export default function ATDashboardLayout() {
         return <TeamOverview />;
       case "emr":
         return <EMRView />;
+      case "my-encounters":
+        return <MyEncounters />;
       default:
         return <MyDashboard />;
     }

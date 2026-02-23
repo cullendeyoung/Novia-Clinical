@@ -16,11 +16,7 @@ import type { Id } from "../../../convex/_generated/dataModel";
 
 type EncounterTypeFilter = "all" | "initial_eval" | "daily_care" | "soap_followup" | "rtp_clearance" | "rehab_program" | "other";
 
-interface MyEncountersProps {
-  onBack: () => void;
-}
-
-export default function MyEncounters({ onBack }: MyEncountersProps) {
+export default function MyEncounters() {
   const {
     setCurrentPage,
     setSelectedAthleteId,
@@ -117,7 +113,7 @@ export default function MyEncounters({ onBack }: MyEncountersProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={onBack}
+            onClick={() => setCurrentPage("my-dashboard")}
             className="text-slate-600"
           >
             <ArrowLeft className="h-4 w-4 mr-1" />

@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 import type { Id } from "../../convex/_generated/dataModel";
 
 // Top-level page navigation
-export type ATPage = "my-dashboard" | "team-overview" | "emr";
+export type ATPage = "my-dashboard" | "team-overview" | "emr" | "my-encounters";
 
 // View modes for the EMR main content area
 export type ATViewMode = "dashboard" | "encounter" | "profile" | "new-encounter" | "start-document" | "rehab-program" | "injury-detail" | "archived-documents" | "all-encounters";
