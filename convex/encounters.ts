@@ -332,6 +332,70 @@ export const listRecent = query({
 });
 
 /**
+ * List encounters created by the current user (provider)
+ */
+export const listMyEncounters = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("encounters"),
+      athleteId: v.id("athletes"),
+      athleteName: v.string(),
+      teamName: v.string(),
+      encounterType: encounterTypeValidator,
+      encounterDatetime: v.number(),
+      hasNote: v.boolean(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const auth = await requireAuth(ctx);
+    requirePermission(auth, "encounter", "read");
+
+    const limit = args.limit || 50;
+
+    // Query encounters by the current provider
+    const encounters = await ctx.db
+      .query("encounters")
+      .withIndex("by_providerUserId", (q) => q.eq("providerUserId", auth.userId))
+      .order("desc")
+      .take(limit * 2);
+
+    const result = await Promise.all(
+      encounters
+        .filter((e) => !e.isDeleted && !e.isArchived)
+        .slice(0, limit)
+        .map(async (enc) => {
+          const athlete = await ctx.db.get(enc.athleteId);
+          if (!athlete || athlete.isDeleted) return null;
+
+          const team = await ctx.db.get(athlete.teamId);
+          if (!team) return null;
+
+          return {
+            _id: enc._id,
+            athleteId: enc.athleteId,
+            athleteName: `${athlete.firstName} ${athlete.lastName}`,
+            teamName: team.name,
+            encounterType: enc.encounterType,
+            encounterDatetime: enc.encounterDatetime,
+            hasNote: !!(
+              enc.subjectiveText ||
+              enc.objectiveText ||
+              enc.fullNoteText
+            ),
+          };
+        })
+    );
+
+    return result
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+      .slice(0, limit);
+  },
+});
+
+/**
  * Get today's encounter count for dashboard
  */
 export const getTodayCount = query({
