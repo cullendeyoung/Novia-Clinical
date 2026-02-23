@@ -27,7 +27,7 @@ interface ATWelcomeProps {
 }
 
 export default function ATWelcome({ showStartDocumentInitially = false }: ATWelcomeProps) {
-  const { setSelectedAthleteId, setSelectedTeamId, setViewMode } = useATContext();
+  const { setSelectedAthleteId, setSelectedTeamId, setViewMode, setPreSelectedEncounterType } = useATContext();
   const [showStartDocument, setShowStartDocument] = useState(showStartDocumentInitially);
   const [selectedAthlete, setSelectedAthlete] = useState<Id<"athletes"> | "">("");
   const [selectedTeam, setSelectedTeam] = useState<Id<"teams"> | "">("");
@@ -46,6 +46,9 @@ export default function ATWelcome({ showStartDocumentInitially = false }: ATWelc
     if (selectedTeam) {
       setSelectedTeamId(selectedTeam);
     }
+
+    // Set the pre-selected encounter type so the form knows what type to use
+    setPreSelectedEncounterType(selectedEncounterType as "daily_care" | "soap_followup" | "initial_eval" | "rtp_clearance" | "rehab_program" | "other");
 
     // Route to rehab program form if that type is selected
     if (selectedEncounterType === "rehab_program") {

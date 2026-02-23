@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { useATContext } from "@/contexts/ATContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,7 @@ export default function AthleteProfile() {
   const { selectedAthleteId, setViewMode, setSelectedEncounterId } = useATContext();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [selectedInjuryId, setSelectedInjuryId] = useState<string | null>(null);
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -57,6 +59,12 @@ export default function AthleteProfile() {
   const rehabPrograms = useQuery(
     api.rehabPrograms.getActiveByAthlete,
     selectedAthleteId ? { athleteId: selectedAthleteId } : "skip"
+  );
+
+  // Get encounters for the selected injury
+  const injuryEncounters = useQuery(
+    api.encounters.getByInjury,
+    selectedInjuryId ? { injuryId: selectedInjuryId as Id<"injuries"> } : "skip"
   );
 
   const updateAvailabilityStatus = useMutation(api.athletes.updateAvailabilityStatus);
@@ -234,31 +242,89 @@ export default function AthleteProfile() {
                 </div>
               ) : (
                 activeInjuries.map((injury) => (
-                  <div key={injury._id} className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
-                        </p>
-                        {injury.diagnosis && (
-                          <p className="text-sm text-slate-600 mt-0.5">{injury.diagnosis}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Injured: {injury.injuryDate} • {injury.encounterCount} encounters
-                        </p>
+                  <div key={injury._id}>
+                    <button
+                      onClick={() => setSelectedInjuryId(selectedInjuryId === injury._id ? null : injury._id)}
+                      className={`w-full p-4 text-left hover:bg-slate-50 transition-colors ${
+                        selectedInjuryId === injury._id ? "bg-amber-50" : ""
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className={`font-medium ${
+                            selectedInjuryId === injury._id ? "text-amber-900" : "text-slate-900"
+                          }`}>
+                            {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
+                          </p>
+                          {injury.diagnosis && (
+                            <p className="text-sm text-slate-600 mt-0.5">{injury.diagnosis}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Injured: {injury.injuryDate} • {injury.encounterCount} encounters
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                              injury.rtpStatus === "out"
+                                ? "bg-red-100 text-red-700"
+                                : injury.rtpStatus === "limited"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-green-100 text-green-700"
+                            }`}
+                          >
+                            {injury.rtpStatus === "out" ? "Out" : injury.rtpStatus === "limited" ? "Limited" : "Full"}
+                          </span>
+                          {selectedInjuryId === injury._id ? (
+                            <ChevronDown className="h-4 w-4 text-amber-500" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-slate-400" />
+                          )}
+                        </div>
                       </div>
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          injury.rtpStatus === "out"
-                            ? "bg-red-100 text-red-700"
-                            : injury.rtpStatus === "limited"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {injury.rtpStatus === "out" ? "Out" : injury.rtpStatus === "limited" ? "Limited" : "Full"}
-                      </span>
-                    </div>
+                    </button>
+                    {/* Injury Documentation - shown when injury is selected */}
+                    {selectedInjuryId === injury._id && (
+                      <div className="bg-amber-50 border-t border-amber-200 px-4 py-3">
+                        <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-2">
+                          Documentation for this injury
+                        </p>
+                        {!injuryEncounters ? (
+                          <p className="text-sm text-amber-700">Loading...</p>
+                        ) : injuryEncounters.length === 0 ? (
+                          <p className="text-sm text-amber-700 italic">No documentation yet</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {injuryEncounters.map((enc) => (
+                              <button
+                                key={enc._id}
+                                onClick={() => {
+                                  setSelectedEncounterId(enc._id);
+                                  setViewMode("encounter");
+                                }}
+                                className="w-full flex items-center justify-between bg-white rounded-lg px-3 py-2 text-left hover:bg-amber-100 transition-colors border border-amber-200"
+                              >
+                                <div>
+                                  <p className="text-sm font-medium text-slate-900">
+                                    {enc.encounterType === "initial_eval"
+                                      ? "Initial Eval"
+                                      : enc.encounterType === "soap_followup"
+                                        ? "Follow-Up"
+                                        : enc.encounterType === "daily_care"
+                                          ? "Daily Care"
+                                          : enc.encounterType}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(enc.encounterDatetime).toLocaleDateString()} • {enc.providerName}
+                                  </p>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-slate-400" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))
               )}

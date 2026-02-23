@@ -63,7 +63,7 @@ const createEmptyExercise = (): Exercise => ({
 });
 
 export default function RehabProgramForm() {
-  const { selectedAthleteId, setViewMode } = useATContext();
+  const { selectedAthleteId, setViewMode, setPreSelectedEncounterType } = useATContext();
 
   const athlete = useQuery(
     api.athletes.getById,
@@ -202,6 +202,7 @@ export default function RehabProgramForm() {
   const handleInjuryChange = (value: string) => {
     if (value === "new_injury") {
       // Redirect to initial evaluation form to document new injury first
+      setPreSelectedEncounterType("initial_eval");
       setViewMode("new-encounter");
       return;
     }

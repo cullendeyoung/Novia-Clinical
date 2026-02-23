@@ -221,13 +221,15 @@ export default function EncounterColumn() {
                     )}
                   </div>
                   {encounter.injuryBodyRegion && (
-                    <p className={`text-xs mt-0.5 truncate ${
-                      encounter.encounterType === "initial_eval"
-                        ? "text-amber-600 font-medium bg-amber-100 px-1.5 py-0.5 rounded inline-block"
-                        : "text-muted-foreground"
-                    }`}>
-                      {encounter.encounterType === "initial_eval" ? "" : "Re: "}{encounter.injuryBodyRegion}
-                    </p>
+                    <div className="mt-1">
+                      <span className={`text-xs truncate ${
+                        encounter.encounterType === "initial_eval"
+                          ? "text-amber-800 font-semibold bg-amber-200 px-2 py-0.5 rounded"
+                          : "text-muted-foreground"
+                      }`}>
+                        {encounter.encounterType === "initial_eval" ? "🔶 " : "Re: "}{encounter.injuryBodyRegion}
+                      </span>
+                    </div>
                   )}
                 </div>
               </button>

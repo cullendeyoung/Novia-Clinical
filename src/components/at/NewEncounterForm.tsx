@@ -173,6 +173,8 @@ export default function NewEncounterForm() {
     selectedAthleteId,
     setViewMode,
     setSelectedEncounterId,
+    preSelectedEncounterType,
+    setPreSelectedEncounterType,
   } = useATContext();
 
   const athlete = useQuery(
@@ -186,12 +188,20 @@ export default function NewEncounterForm() {
   );
 
   const createEncounter = useMutation(api.encounters.create);
+  const createInjury = useMutation(api.injuries.create);
   const generateUploadUrl = useMutation(api.encounters.generateUploadUrl);
   const processAmbientRecording = useAction(api.transcription.processAmbientRecording);
 
-  // Form state
-  const [encounterType, setEncounterType] = useState<EncounterType>("daily_care");
-  const [noteFormat, setNoteFormat] = useState<NoteFormat>("summary");
+  // Form state - use preSelectedEncounterType if available
+  const [encounterType, setEncounterType] = useState<EncounterType>(
+    preSelectedEncounterType || "daily_care"
+  );
+  const [noteFormat, setNoteFormat] = useState<NoteFormat>(
+    preSelectedEncounterType
+      ? ENCOUNTER_TYPE_CONFIG[preSelectedEncounterType]?.defaultFormat || "summary"
+      : "summary"
+  );
+
   const [injuryId, setInjuryId] = useState<Id<"injuries"> | "">("");
   const [newInjuryTitle, setNewInjuryTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
@@ -219,6 +229,7 @@ export default function NewEncounterForm() {
     if (recordingState.isRecording) {
       cancelRecording();
     }
+    setPreSelectedEncounterType(null);
     setViewMode("profile");
   };
 
@@ -344,6 +355,12 @@ SUMMARY: ${result.summary}`;
       return;
     }
 
+    // Validate new injury title for Initial Eval
+    if (encounterType === "initial_eval" && !newInjuryTitle.trim() && !injuryId) {
+      toast.error("Please enter a new injury title for the initial evaluation");
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Parse content based on format
@@ -365,10 +382,25 @@ SUMMARY: ${result.summary}`;
         subjectiveText = noteContent;
       }
 
+      // For Initial Eval with new injury title, create the injury first
+      let linkedInjuryId = injuryId ? (injuryId as Id<"injuries">) : undefined;
+
+      if (encounterType === "initial_eval" && newInjuryTitle.trim() && !injuryId) {
+        // Create the new injury
+        const newInjuryId = await createInjury({
+          athleteId: selectedAthleteId,
+          injuryDate: new Date().toISOString().split("T")[0],
+          bodyRegion: newInjuryTitle.trim(), // Use the title as body region for now
+          side: "NA" as const,
+          rtpStatus: "out" as const,
+        });
+        linkedInjuryId = newInjuryId;
+      }
+
       const encounterId = await createEncounter({
         athleteId: selectedAthleteId,
         encounterType,
-        injuryId: injuryId ? (injuryId as Id<"injuries">) : undefined,
+        injuryId: linkedInjuryId,
         subjectiveText,
         objectiveText,
         assessmentText,
@@ -382,6 +414,7 @@ SUMMARY: ${result.summary}`;
       } else {
         toast.success("Document saved successfully");
       }
+      setPreSelectedEncounterType(null);
       setSelectedEncounterId(encounterId);
       setViewMode("encounter");
     } catch (error) {

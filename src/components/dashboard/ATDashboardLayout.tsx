@@ -7,7 +7,7 @@ import FullPageSpinner from "@/components/ui/FullPageSpinner";
 import { Button } from "@/components/ui/button";
 import { LogOut, ArrowLeft, LayoutDashboard, Users, FileText } from "lucide-react";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { ATContext, type ATViewMode, type ATPage } from "@/contexts/ATContext";
+import { ATContext, type ATViewMode, type ATPage, type EncounterType } from "@/contexts/ATContext";
 import NoviaLogo from "@/components/ui/NoviaLogo";
 import MyDashboard from "@/components/at/MyDashboard";
 import TeamOverview from "@/components/at/TeamOverview";
@@ -37,6 +37,7 @@ export default function ATDashboardLayout() {
   const [selectedAthleteId, setSelectedAthleteId] = useState<Id<"athletes"> | null>(null);
   const [selectedEncounterId, setSelectedEncounterId] = useState<Id<"encounters"> | null>(null);
   const [viewMode, setViewMode] = useState<ATViewMode>("dashboard");
+  const [preSelectedEncounterType, setPreSelectedEncounterType] = useState<EncounterType | null>(null);
 
   // Wrap setSelectedTeamId to handle user selections
   const setSelectedTeamId = (id: Id<"teams"> | null) => {
@@ -98,6 +99,8 @@ export default function ATDashboardLayout() {
         setSelectedEncounterId,
         viewMode,
         setViewMode,
+        preSelectedEncounterType,
+        setPreSelectedEncounterType,
       }}
     >
       <div className="flex h-screen flex-col bg-slate-50">

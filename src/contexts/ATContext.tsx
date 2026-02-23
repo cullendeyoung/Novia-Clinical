@@ -7,6 +7,9 @@ export type ATPage = "my-dashboard" | "team-overview" | "emr";
 // View modes for the EMR main content area
 export type ATViewMode = "dashboard" | "encounter" | "profile" | "new-encounter" | "start-document" | "rehab-program";
 
+// Encounter types
+export type EncounterType = "daily_care" | "soap_followup" | "initial_eval" | "rtp_clearance" | "rehab_program" | "other";
+
 // Context for sharing state across AT portal
 export interface ATContextType {
   // Current page
@@ -24,6 +27,9 @@ export interface ATContextType {
   // View mode (EMR only)
   viewMode: ATViewMode;
   setViewMode: (mode: ATViewMode) => void;
+  // Pre-selected encounter type (from ATWelcome)
+  preSelectedEncounterType: EncounterType | null;
+  setPreSelectedEncounterType: (type: EncounterType | null) => void;
 }
 
 export const ATContext = createContext<ATContextType | null>(null);
