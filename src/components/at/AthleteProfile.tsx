@@ -10,7 +10,6 @@ import {
   Mail,
   Calendar,
   Ruler,
-  AlertCircle,
   Activity,
   FileText,
   Shield,
@@ -191,34 +190,6 @@ export default function AthleteProfile() {
           </div>
         </div>
 
-        {/* Active Injuries Alert */}
-        {activeInjuries.length > 0 && (
-          <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 p-3">
-            <div className="flex items-center gap-2 text-amber-700 font-medium">
-              <AlertCircle className="h-5 w-5" />
-              <span>{activeInjuries.length} Active Injur{activeInjuries.length === 1 ? "y" : "ies"}</span>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {activeInjuries.map((injury) => (
-                <span
-                  key={injury._id}
-                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${
-                    injury.rtpStatus === "out"
-                      ? "bg-red-100 text-red-700"
-                      : injury.rtpStatus === "limited"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-green-100 text-green-700"
-                  }`}
-                >
-                  {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
-                  <span className="text-xs opacity-75">
-                    • {injury.rtpStatus === "out" ? "Out" : injury.rtpStatus === "limited" ? "Limited" : "Full Participation"}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Content Grid */}
