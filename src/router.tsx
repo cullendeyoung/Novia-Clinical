@@ -13,6 +13,7 @@ import DevSetup from "./pages/DevSetup";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import OrganizationDashboardLayout from "./components/dashboard/OrganizationDashboardLayout";
 import ATDashboardLayout from "./components/dashboard/ATDashboardLayout";
+import AthleteDashboardLayout from "./components/dashboard/AthleteDashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
 import OrganizationDashboard from "./pages/dashboard/OrganizationDashboard";
 import Staff from "./pages/dashboard/Staff";
@@ -145,6 +146,10 @@ export const router = createBrowserRouter([
           {
             path: "/at",
             element: <ATDashboardLayout />,
+          },
+          {
+            path: "/athlete",
+            element: <AthleteDashboardLayout />,
           },
         ],
       },

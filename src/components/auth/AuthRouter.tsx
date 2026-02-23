@@ -40,6 +40,11 @@ export default function AuthRouter() {
     return <Navigate to="/org" replace />;
   }
 
+  // If user is an athlete, redirect to athlete portal
+  if (currentUser && currentUser.role === "athlete") {
+    return <Navigate to="/athlete" replace />;
+  }
+
   // If user has a clinician profile, redirect to clinician dashboard
   if (clinician) {
     return <Navigate to="/dashboard" replace />;
