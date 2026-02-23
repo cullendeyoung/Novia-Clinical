@@ -70,7 +70,7 @@ export default function EncounterColumn() {
     const typeMap: Record<string, string> = {
       daily_care: "Daily Care",
       soap_followup: "SOAP Follow-Up",
-      initial_eval: "Initial Evaluation",
+      initial_eval: "Initial Eval / New Injury",
       rtp_clearance: "RTP Clearance",
       other: "Other",
     };
@@ -221,8 +221,12 @@ export default function EncounterColumn() {
                     )}
                   </div>
                   {encounter.injuryBodyRegion && (
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      Re: {encounter.injuryBodyRegion}
+                    <p className={`text-xs mt-0.5 truncate ${
+                      encounter.encounterType === "initial_eval"
+                        ? "text-amber-600 font-medium bg-amber-100 px-1.5 py-0.5 rounded inline-block"
+                        : "text-muted-foreground"
+                    }`}>
+                      {encounter.encounterType === "initial_eval" ? "" : "Re: "}{encounter.injuryBodyRegion}
                     </p>
                   )}
                 </div>

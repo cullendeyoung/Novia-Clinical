@@ -1,4 +1,5 @@
-import { useQuery } from "convex/react";
+import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useATContext } from "@/contexts/ATContext";
 import { Button } from "@/components/ui/button";
@@ -11,17 +12,66 @@ import {
   Edit,
   CheckCircle,
   Mic,
-  Upload,
+  Save,
+  Loader2,
+  X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function EncounterDetail() {
   const { selectedEncounterId, setViewMode, setSelectedEncounterId } = useATContext();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Editable fields
+  const [editSubjective, setEditSubjective] = useState("");
+  const [editObjective, setEditObjective] = useState("");
+  const [editAssessment, setEditAssessment] = useState("");
+  const [editPlan, setEditPlan] = useState("");
 
   const encounter = useQuery(
     api.encounters.getById,
     selectedEncounterId ? { encounterId: selectedEncounterId } : "skip"
   );
+
+  const updateEncounter = useMutation(api.encounters.update);
+
+  // Initialize edit fields when entering edit mode
+  const handleStartEditing = () => {
+    if (encounter) {
+      setEditSubjective(encounter.subjectiveText || "");
+      setEditObjective(encounter.objectiveText || "");
+      setEditAssessment(encounter.assessmentText || "");
+      setEditPlan(encounter.planText || "");
+      setIsEditing(true);
+    }
+  };
+
+  const handleCancelEditing = () => {
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedEncounterId) return;
+
+    setIsSaving(true);
+    try {
+      await updateEncounter({
+        encounterId: selectedEncounterId,
+        subjectiveText: editSubjective || undefined,
+        objectiveText: editObjective || undefined,
+        assessmentText: editAssessment || undefined,
+        planText: editPlan || undefined,
+      });
+      toast.success("Document updated successfully!");
+      setIsEditing(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update document";
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (!encounter) {
     return (
@@ -35,7 +85,7 @@ export default function EncounterDetail() {
     const typeMap: Record<string, string> = {
       daily_care: "Daily Care / Treatment",
       soap_followup: "SOAP Follow-Up",
-      initial_eval: "Initial Evaluation",
+      initial_eval: "Initial Eval / New Injury",
       rtp_clearance: "Return-to-Play Clearance",
       other: "Other",
     };
@@ -107,30 +157,37 @@ export default function EncounterDetail() {
                 <CheckCircle className="h-4 w-4" />
                 Signed by {encounter.signedOffByName}
               </span>
+            ) : isEditing ? (
+              <Button variant="outline" size="sm" onClick={handleCancelEditing}>
+                <X className="mr-1 h-4 w-4" />
+                Cancel
+              </Button>
             ) : (
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleStartEditing}>
                 <Edit className="mr-1 h-4 w-4" />
                 Edit
               </Button>
             )}
-            <Button
-              onClick={() => toast.success("Upload to EMR coming soon!")}
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload to EMR
-            </Button>
           </div>
         </div>
 
-        {/* Injury Reference */}
+        {/* Injury Reference - Highlighted for Initial Eval */}
         {encounter.injuryId && (
-          <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2">
+          <div className={`mt-4 rounded-lg px-4 py-2 ${
+            encounter.encounterType === "initial_eval"
+              ? "bg-amber-100 border-2 border-amber-300"
+              : "bg-amber-50 border border-amber-200"
+          }`}>
             <div className="flex items-center gap-2 text-amber-700">
               <Activity className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                Related to: {encounter.injuryBodyRegion}
-                {encounter.injurySide !== "NA" && ` (${encounter.injurySide})`}
+              <span className={`font-medium ${
+                encounter.encounterType === "initial_eval" ? "text-base" : "text-sm"
+              }`}>
+                {encounter.encounterType === "initial_eval" ? "New Injury: " : "Related to: "}
+                <span className="text-amber-900">
+                  {encounter.injuryBodyRegion}
+                  {encounter.injurySide !== "NA" && ` (${encounter.injurySide})`}
+                </span>
               </span>
             </div>
           </div>
@@ -144,127 +201,216 @@ export default function EncounterDetail() {
           Documented by <span className="font-medium text-slate-700">{encounter.providerName}</span>
         </div>
 
-        {/* SOAP Note Content */}
-        <div className="space-y-6">
-          {/* Subjective */}
-          {encounter.subjectiveText && (
+        {isEditing ? (
+          /* Edit Mode */
+          <div className="space-y-6">
+            {/* Subjective */}
             <div className="rounded-xl border border-slate-200 bg-white">
               <div className="border-b border-slate-200 px-5 py-3 bg-blue-50">
                 <h2 className="font-semibold text-blue-900">Subjective</h2>
                 <p className="text-xs text-blue-600 mt-0.5">Patient's description and history</p>
               </div>
-              <div className="p-5">
-                <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
-                  {encounter.subjectiveText}
-                </p>
+              <div className="p-4">
+                <textarea
+                  value={editSubjective}
+                  onChange={(e) => setEditSubjective(e.target.value)}
+                  placeholder="Enter subjective information..."
+                  className="w-full min-h-[120px] rounded-md border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y"
+                />
               </div>
             </div>
-          )}
 
-          {/* Objective */}
-          {encounter.objectiveText && (
+            {/* Objective */}
             <div className="rounded-xl border border-slate-200 bg-white">
               <div className="border-b border-slate-200 px-5 py-3 bg-green-50">
                 <h2 className="font-semibold text-green-900">Objective</h2>
                 <p className="text-xs text-green-600 mt-0.5">Clinical findings and measurements</p>
               </div>
-              <div className="p-5">
-                <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
-                  {encounter.objectiveText}
-                </p>
+              <div className="p-4">
+                <textarea
+                  value={editObjective}
+                  onChange={(e) => setEditObjective(e.target.value)}
+                  placeholder="Enter objective findings..."
+                  className="w-full min-h-[120px] rounded-md border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y"
+                />
               </div>
             </div>
-          )}
 
-          {/* Assessment */}
-          {encounter.assessmentText && (
+            {/* Assessment */}
             <div className="rounded-xl border border-slate-200 bg-white">
               <div className="border-b border-slate-200 px-5 py-3 bg-amber-50">
                 <h2 className="font-semibold text-amber-900">Assessment</h2>
                 <p className="text-xs text-amber-600 mt-0.5">Clinical impression and diagnosis</p>
               </div>
-              <div className="p-5">
-                <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
-                  {encounter.assessmentText}
-                </p>
+              <div className="p-4">
+                <textarea
+                  value={editAssessment}
+                  onChange={(e) => setEditAssessment(e.target.value)}
+                  placeholder="Enter assessment..."
+                  className="w-full min-h-[120px] rounded-md border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y"
+                />
               </div>
             </div>
-          )}
 
-          {/* Plan */}
-          {encounter.planText && (
+            {/* Plan */}
             <div className="rounded-xl border border-slate-200 bg-white">
               <div className="border-b border-slate-200 px-5 py-3 bg-purple-50">
                 <h2 className="font-semibold text-purple-900">Plan</h2>
                 <p className="text-xs text-purple-600 mt-0.5">Treatment plan and follow-up</p>
               </div>
-              <div className="p-5">
-                <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
-                  {encounter.planText}
-                </p>
+              <div className="p-4">
+                <textarea
+                  value={editPlan}
+                  onChange={(e) => setEditPlan(e.target.value)}
+                  placeholder="Enter plan..."
+                  className="w-full min-h-[120px] rounded-md border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y"
+                />
               </div>
             </div>
-          )}
 
-          {/* Full Note (if no SOAP sections) */}
-          {encounter.fullNoteText && !encounter.subjectiveText && !encounter.objectiveText && (
-            <div className="rounded-xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-200 px-5 py-3">
-                <h2 className="font-semibold text-slate-900">Clinical Note</h2>
-              </div>
-              <div className="p-5">
-                <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
-                  {encounter.fullNoteText}
-                </p>
-              </div>
+            {/* Save Edit Button */}
+            <div className="pt-4">
+              <Button
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 py-6 text-base"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-5 w-5" />
+                    Save Edit
+                  </>
+                )}
+              </Button>
             </div>
-          )}
-
-          {/* Transcript (if AI generated) */}
-          {encounter.transcriptText && (
-            <div className="rounded-xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-200 px-5 py-3 bg-slate-50">
-                <h2 className="font-semibold text-slate-700 flex items-center gap-2">
-                  <Mic className="h-4 w-4" />
-                  Original Transcript
-                </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Voice recording transcription</p>
-              </div>
-              <div className="p-5">
-                <p className="text-slate-600 whitespace-pre-wrap leading-relaxed text-sm italic">
-                  {encounter.transcriptText}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* No Content */}
-          {!encounter.subjectiveText &&
-            !encounter.objectiveText &&
-            !encounter.assessmentText &&
-            !encounter.planText &&
-            !encounter.fullNoteText && (
-              <div className="rounded-xl border-2 border-dashed border-slate-200 p-8 text-center">
-                <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-muted-foreground">No clinical notes recorded for this encounter</p>
-                <Button className="mt-4" variant="outline">
-                  <Edit className="mr-2 h-4 w-4" />
-                  Add Notes
-                </Button>
+          </div>
+        ) : (
+          /* View Mode */
+          <div className="space-y-6">
+            {/* Subjective */}
+            {encounter.subjectiveText && (
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="border-b border-slate-200 px-5 py-3 bg-blue-50">
+                  <h2 className="font-semibold text-blue-900">Subjective</h2>
+                  <p className="text-xs text-blue-600 mt-0.5">Patient's description and history</p>
+                </div>
+                <div className="p-5">
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    {encounter.subjectiveText}
+                  </p>
+                </div>
               </div>
             )}
-        </div>
 
-        {/* Upload to EMR Button */}
-        <div className="mt-8 pt-6 border-t border-slate-200">
-          <Button
-            onClick={() => toast.success("Document is saved to the EMR")}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 py-6 text-base"
-          >
-            <Upload className="mr-2 h-5 w-5" />
-            Upload to EMR
-          </Button>
-        </div>
+            {/* Objective */}
+            {encounter.objectiveText && (
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="border-b border-slate-200 px-5 py-3 bg-green-50">
+                  <h2 className="font-semibold text-green-900">Objective</h2>
+                  <p className="text-xs text-green-600 mt-0.5">Clinical findings and measurements</p>
+                </div>
+                <div className="p-5">
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    {encounter.objectiveText}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Assessment */}
+            {encounter.assessmentText && (
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="border-b border-slate-200 px-5 py-3 bg-amber-50">
+                  <h2 className="font-semibold text-amber-900">Assessment</h2>
+                  <p className="text-xs text-amber-600 mt-0.5">Clinical impression and diagnosis</p>
+                </div>
+                <div className="p-5">
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    {encounter.assessmentText}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Plan */}
+            {encounter.planText && (
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="border-b border-slate-200 px-5 py-3 bg-purple-50">
+                  <h2 className="font-semibold text-purple-900">Plan</h2>
+                  <p className="text-xs text-purple-600 mt-0.5">Treatment plan and follow-up</p>
+                </div>
+                <div className="p-5">
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    {encounter.planText}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Full Note (if no SOAP sections) */}
+            {encounter.fullNoteText && !encounter.subjectiveText && !encounter.objectiveText && (
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="border-b border-slate-200 px-5 py-3">
+                  <h2 className="font-semibold text-slate-900">Clinical Note</h2>
+                </div>
+                <div className="p-5">
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    {encounter.fullNoteText}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Transcript (if AI generated) */}
+            {encounter.transcriptText && (
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="border-b border-slate-200 px-5 py-3 bg-slate-50">
+                  <h2 className="font-semibold text-slate-700 flex items-center gap-2">
+                    <Mic className="h-4 w-4" />
+                    Original Transcript
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Voice recording transcription</p>
+                </div>
+                <div className="p-5">
+                  <p className="text-slate-600 whitespace-pre-wrap leading-relaxed text-sm italic">
+                    {encounter.transcriptText}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* No Content */}
+            {!encounter.subjectiveText &&
+              !encounter.objectiveText &&
+              !encounter.assessmentText &&
+              !encounter.planText &&
+              !encounter.fullNoteText && (
+                <div className="rounded-xl border-2 border-dashed border-slate-200 p-8 text-center">
+                  <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                  <p className="text-muted-foreground">No clinical notes recorded for this encounter</p>
+                  <Button className="mt-4" variant="outline" onClick={handleStartEditing}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Add Notes
+                  </Button>
+                </div>
+              )}
+
+            {/* Saved to EMR confirmation */}
+            <div className="mt-8 pt-6 border-t border-slate-200">
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-center">
+                <p className="text-emerald-700 font-medium">
+                  <CheckCircle className="inline-block h-4 w-4 mr-2" />
+                  Document saved to EMR
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer Metadata */}
         <div className="mt-6 pt-4 border-t border-slate-200">
