@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useATContext } from "@/contexts/ATContext";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,13 @@ import {
   ChevronDown,
   Dumbbell,
   Activity,
+  Mic,
+  Square,
+  Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { useAudioRecorder, formatDuration } from "@/hooks/useAudioRecorder";
 
 interface Exercise {
   id: string;
@@ -59,6 +63,8 @@ export default function RehabProgramForm() {
   );
 
   const createRehabProgram = useMutation(api.rehabPrograms.create);
+  const generateUploadUrl = useMutation(api.encounters.generateUploadUrl);
+  const processRehabRecording = useAction(api.transcription.processRehabRecording);
 
   // Form state
   const [programName, setProgramName] = useState("");
@@ -69,8 +75,107 @@ export default function RehabProgramForm() {
   const [exercises, setExercises] = useState<Exercise[]>([createEmptyExercise()]);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Recording state
+  const { state: recordingState, startRecording, stopRecording, cancelRecording } = useAudioRecorder();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isAIGenerated, setIsAIGenerated] = useState(false);
+
   const handleBackToProfile = () => {
+    if (recordingState.isRecording) {
+      cancelRecording();
+    }
     setViewMode("profile");
+  };
+
+  const handleStartRecording = async () => {
+    try {
+      toast("Requesting microphone access...", { icon: "🎤" });
+      await startRecording();
+      toast.success("Recording started! Describe the exercises.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to start recording";
+      toast.error(message);
+    }
+  };
+
+  const handleStopRecording = async () => {
+    try {
+      const audioBlob = await stopRecording();
+
+      if (!audioBlob) {
+        toast.error("No audio recorded");
+        return;
+      }
+
+      // Get the selected injury context if any
+      const selectedInjury = activeInjuries?.find(i => i._id === injuryId);
+      const injuryContext = selectedInjury
+        ? `${selectedInjury.bodyRegion} ${selectedInjury.side !== "NA" ? `(${selectedInjury.side})` : ""} ${selectedInjury.diagnosis || ""}`.trim()
+        : injuryId === "prehab" ? "Prehab/Preventive Program" : undefined;
+
+      // Step 1: Upload audio
+      setIsProcessing(true);
+      toast("Uploading audio...", { icon: "📤" });
+
+      const uploadUrl = await generateUploadUrl();
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": audioBlob.type },
+        body: audioBlob,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload audio");
+      }
+
+      const { storageId } = await uploadResponse.json();
+
+      // Step 2: Process the recording
+      toast("Generating rehab program...", { icon: "🎧" });
+
+      const result = await processRehabRecording({
+        storageId,
+        athleteName: athlete ? `${athlete.firstName} ${athlete.lastName}` : undefined,
+        injuryContext,
+      });
+
+      // Fill in the form with AI-generated content
+      setProgramName(result.programName);
+      setProgramDescription(result.programDescription);
+
+      if (result.exercises.length > 0) {
+        setExercises(result.exercises.map(ex => ({
+          id: crypto.randomUUID(),
+          name: ex.name,
+          description: ex.description,
+          sets: ex.sets?.toString() || "",
+          reps: ex.reps || "",
+          holdSeconds: ex.holdSeconds?.toString() || "",
+          durationMinutes: ex.durationMinutes?.toString() || "",
+          frequency: ex.frequency || "",
+          equipment: ex.equipment || "",
+          notes: ex.notes || "",
+        })));
+      }
+
+      setIsAIGenerated(true);
+      toast.success(`Generated ${result.exercises.length} exercises from recording!`);
+      setIsProcessing(false);
+
+    } catch (error) {
+      console.error("Recording processing error:", error);
+      const message = error instanceof Error ? error.message : "Failed to process recording";
+      toast.error(message);
+      setIsProcessing(false);
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (recordingState.isRecording) {
+      await handleStopRecording();
+    } else {
+      await handleStartRecording();
+    }
   };
 
   const handleInjuryChange = (value: string) => {
@@ -191,14 +296,78 @@ export default function RehabProgramForm() {
               Creating program for {athlete.firstName} {athlete.lastName}
             </p>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
-            <Dumbbell className="h-6 w-6 text-purple-600" />
+
+          {/* Voice Recording Button */}
+          <div className="flex items-center gap-2">
+            {recordingState.isRecording && (
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-1.5 rounded-full">
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-sm font-medium">
+                  {formatDuration(recordingState.duration)}
+                </span>
+              </div>
+            )}
+            <Button
+              type="button"
+              variant={recordingState.isRecording ? "destructive" : "outline"}
+              onClick={toggleRecording}
+              disabled={isProcessing}
+              className="gap-2"
+            >
+              {recordingState.isRecording ? (
+                <>
+                  <Square className="h-4 w-4" />
+                  Stop & Generate
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4" />
+                  Voice Input
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="p-6 max-w-4xl">
+        {/* Recording Indicator */}
+        {recordingState.isRecording && (
+          <div className="mb-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-3">
+            <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+            <p className="text-sm text-red-700 font-medium">
+              Recording in progress... Describe the exercises, sets, reps, and any instructions.
+            </p>
+          </div>
+        )}
+
+        {/* Processing Indicator */}
+        {isProcessing && (
+          <div className="mb-6 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 flex items-center gap-3">
+            <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+            <div>
+              <p className="text-sm text-blue-700 font-medium">Processing recording...</p>
+              <p className="text-xs text-blue-600 mt-0.5">
+                AI is extracting exercises from your voice input
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* AI Generated Notice */}
+        {isAIGenerated && !isProcessing && (
+          <div className="mb-6 rounded-lg bg-purple-50 border border-purple-200 px-4 py-3 flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-purple-600" />
+            <div>
+              <p className="text-sm text-purple-700 font-medium">AI-Generated Program</p>
+              <p className="text-xs text-purple-600 mt-0.5">
+                Review and edit the exercises before saving
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Program Info */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 mb-6">
           <h2 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">

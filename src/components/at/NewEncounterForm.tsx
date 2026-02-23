@@ -269,6 +269,7 @@ export default function NewEncounterForm() {
       const result = await processAmbientRecording({
         storageId,
         encounterType,
+        noteFormat, // Pass the selected note format to AI
         athleteName: athlete ? `${athlete.firstName} ${athlete.lastName}` : undefined,
         injuryContext,
       });
@@ -290,14 +291,27 @@ ${result.assessment}
 PLAN:
 ${result.plan}`;
         setNoteContent(soapContent);
+      } else if (noteFormat === "rtp_form") {
+        // RTP Clearance format
+        const rtpContent = `RETURN-TO-PLAY CLEARANCE ASSESSMENT
+
+CURRENT STATUS:
+${result.subjective}
+
+FUNCTIONAL TESTING:
+${result.objective}
+
+CLEARANCE DETERMINATION:
+${result.assessment}
+
+ACTIVITY LEVEL & RESTRICTIONS:
+${result.plan}
+
+SUMMARY: ${result.summary}`;
+        setNoteContent(rtpContent);
       } else {
-        // For summary format, use the summary
-        setNoteContent(result.summary + "\n\n---\nFull details:\n" +
-          `Subjective: ${result.subjective}\n` +
-          `Objective: ${result.objective}\n` +
-          `Assessment: ${result.assessment}\n` +
-          `Plan: ${result.plan}`
-        );
+        // Summary format - use the summary as the main content
+        setNoteContent(result.summary);
       }
 
       toast.success("Note generated from recording!");
