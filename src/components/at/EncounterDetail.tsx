@@ -185,10 +185,52 @@ export default function EncounterDetail() {
                 Cancel
               </Button>
             ) : (
-              <Button variant="outline" size="sm" onClick={handleStartEditing}>
-                <Edit className="mr-1 h-4 w-4" />
-                Edit
-              </Button>
+              <>
+                <Button variant="outline" size="sm" onClick={handleStartEditing}>
+                  <Edit className="mr-1 h-4 w-4" />
+                  Edit
+                </Button>
+                {showDeleteConfirm ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={isDeleting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          Confirm
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="mr-1 h-4 w-4" />
+                    Delete
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -448,54 +490,6 @@ export default function EncounterDetail() {
           </div>
         </div>
 
-        {/* Delete Document - Always visible */}
-        <div className="mt-6 pt-4 border-t border-slate-200 flex justify-end">
-          {showDeleteConfirm ? (
-            <div className="w-full rounded-lg border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-700 mb-3">
-                Are you sure you want to delete this document? This action cannot be undone.
-              </p>
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  disabled={isDeleting}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="mr-1 h-4 w-4" />
-                      Confirm Delete
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDeleteConfirm(true)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="mr-1 h-4 w-4" />
-              Delete Document
-            </Button>
-          )}
-        </div>
       </div>
     </div>
   );
