@@ -310,6 +310,55 @@ export default function EncounterDetail() {
                 )}
               </Button>
             </div>
+
+            {/* Delete Document - Only in Edit Mode */}
+            <div className="pt-4 flex justify-end">
+              {showDeleteConfirm ? (
+                <div className="w-full rounded-lg border border-red-200 bg-red-50 p-4">
+                  <p className="text-sm text-red-700 mb-3">
+                    Are you sure you want to delete this document? This action cannot be undone.
+                  </p>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={isDeleting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="mr-1 h-4 w-4" />
+                          Confirm Delete
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="mr-1 h-4 w-4" />
+                  Delete Document
+                </Button>
+              )}
+            </div>
           </div>
         ) : (
           /* View Mode */
@@ -430,55 +479,6 @@ export default function EncounterDetail() {
                   Document saved to EMR
                 </p>
               </div>
-            </div>
-
-            {/* Delete Document */}
-            <div className="mt-6">
-              {showDeleteConfirm ? (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-                  <p className="text-sm text-red-700 mb-3">
-                    Are you sure you want to delete this document? This action cannot be undone.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowDeleteConfirm(false)}
-                      disabled={isDeleting}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? (
-                        <>
-                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                          Deleting...
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className="mr-1 h-4 w-4" />
-                          Confirm Delete
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="mr-1 h-4 w-4" />
-                  Delete Document
-                </Button>
-              )}
             </div>
           </div>
         )}
