@@ -618,6 +618,26 @@ export const remove = mutation({
 });
 
 // =============================================================================
+// File Upload
+// =============================================================================
+
+/**
+ * Generate an upload URL for audio recordings
+ * Used by the ambient note feature to upload audio files to Convex storage
+ */
+export const generateUploadUrl = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    // Require authentication
+    await requireAuth(ctx);
+
+    // Generate and return the upload URL
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// =============================================================================
 // Constants
 // =============================================================================
 

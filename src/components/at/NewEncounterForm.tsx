@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useATContext } from "@/contexts/ATContext";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,16 @@ import { Select } from "@/components/ui/select";
 import {
   ArrowLeft,
   Mic,
-  MicOff,
   FileText,
   Save,
   Loader2,
   ChevronDown,
+  Sparkles,
+  Square,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { useAudioRecorder, formatDuration } from "@/hooks/useAudioRecorder";
 
 type EncounterType = "daily_care" | "soap_followup" | "initial_eval" | "rtp_clearance" | "rehab_program" | "other";
 type NoteFormat = "summary" | "soap" | "rtp_form";
@@ -162,6 +164,8 @@ const ENCOUNTER_TYPES = Object.entries(ENCOUNTER_TYPE_CONFIG).map(([value, confi
   label: config.label,
 }));
 
+type ProcessingState = "idle" | "uploading" | "transcribing" | "generating" | "complete";
+
 export default function NewEncounterForm() {
   const {
     selectedAthleteId,
@@ -180,14 +184,20 @@ export default function NewEncounterForm() {
   );
 
   const createEncounter = useMutation(api.encounters.create);
+  const generateUploadUrl = useMutation(api.encounters.generateUploadUrl);
+  const processAmbientRecording = useAction(api.transcription.processAmbientRecording);
 
   // Form state
   const [encounterType, setEncounterType] = useState<EncounterType>("daily_care");
   const [noteFormat, setNoteFormat] = useState<NoteFormat>("summary");
   const [injuryId, setInjuryId] = useState<Id<"injuries"> | "">("");
   const [noteContent, setNoteContent] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Recording and transcription state
+  const { state: recordingState, startRecording, stopRecording, cancelRecording } = useAudioRecorder();
+  const [processingState, setProcessingState] = useState<ProcessingState>("idle");
+  const [transcript, setTranscript] = useState<string>("");
 
   const currentConfig = ENCOUNTER_TYPE_CONFIG[encounterType];
 
@@ -203,7 +213,108 @@ export default function NewEncounterForm() {
   };
 
   const handleBackToProfile = () => {
+    if (recordingState.isRecording) {
+      cancelRecording();
+    }
     setViewMode("profile");
+  };
+
+  const handleStartRecording = async () => {
+    try {
+      await startRecording();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to start recording";
+      toast.error(message);
+    }
+  };
+
+  const handleStopRecording = async () => {
+    try {
+      const audioBlob = await stopRecording();
+
+      if (!audioBlob) {
+        toast.error("No audio recorded");
+        return;
+      }
+
+      // Get the selected injury context if any
+      const selectedInjury = activeInjuries?.find(i => i._id === injuryId);
+      const injuryContext = selectedInjury
+        ? `${selectedInjury.bodyRegion} ${selectedInjury.side !== "NA" ? `(${selectedInjury.side})` : ""} ${selectedInjury.diagnosis || ""}`.trim()
+        : undefined;
+
+      // Step 1: Upload audio to Convex storage
+      setProcessingState("uploading");
+      toast("Uploading audio...", { icon: "📤" });
+
+      const uploadUrl = await generateUploadUrl();
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": audioBlob.type },
+        body: audioBlob,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload audio");
+      }
+
+      const { storageId } = await uploadResponse.json();
+
+      // Step 2: Process the recording (transcribe + generate SOAP)
+      setProcessingState("transcribing");
+      toast("Transcribing audio...", { icon: "🎧" });
+
+      const result = await processAmbientRecording({
+        storageId,
+        encounterType,
+        athleteName: athlete ? `${athlete.firstName} ${athlete.lastName}` : undefined,
+        injuryContext,
+      });
+
+      setTranscript(result.transcript);
+      setProcessingState("complete");
+
+      // Format the note based on the selected format
+      if (noteFormat === "soap") {
+        const soapContent = `SUBJECTIVE:
+${result.subjective}
+
+OBJECTIVE:
+${result.objective}
+
+ASSESSMENT:
+${result.assessment}
+
+PLAN:
+${result.plan}`;
+        setNoteContent(soapContent);
+      } else {
+        // For summary format, use the summary
+        setNoteContent(result.summary + "\n\n---\nFull details:\n" +
+          `Subjective: ${result.subjective}\n` +
+          `Objective: ${result.objective}\n` +
+          `Assessment: ${result.assessment}\n` +
+          `Plan: ${result.plan}`
+        );
+      }
+
+      toast.success("Note generated from recording!");
+      setProcessingState("idle");
+
+    } catch (error) {
+      console.error("Recording processing error:", error);
+      const message = error instanceof Error ? error.message : "Failed to process recording";
+      toast.error(message);
+      setProcessingState("idle");
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (recordingState.isRecording) {
+      await handleStopRecording();
+    } else {
+      await handleStartRecording();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -245,7 +356,8 @@ export default function NewEncounterForm() {
         objectiveText,
         assessmentText,
         planText,
-        aiGenerated: false,
+        transcriptText: transcript || undefined,
+        aiGenerated: !!transcript, // Mark as AI-generated if we have a transcript
       });
 
       toast.success("Document saved successfully");
@@ -256,16 +368,6 @@ export default function NewEncounterForm() {
       toast.error(message);
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const toggleRecording = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      toast.success("Recording stopped - transcription coming soon!");
-    } else {
-      setIsRecording(true);
-      toast("Recording started...", { icon: "🎤" });
     }
   };
 
@@ -286,6 +388,15 @@ PLAN:
     setNoteContent(template);
   };
 
+  const isProcessing = processingState !== "idle";
+  const processingMessage = {
+    uploading: "Uploading audio...",
+    transcribing: "Transcribing with AI...",
+    generating: "Generating SOAP note...",
+    complete: "Processing complete!",
+    idle: "",
+  }[processingState];
+
   if (!athlete) {
     return (
       <div className="flex-1 flex items-center justify-center bg-slate-50">
@@ -304,6 +415,7 @@ PLAN:
             size="sm"
             onClick={handleBackToProfile}
             className="text-muted-foreground"
+            disabled={recordingState.isRecording || isProcessing}
           >
             <ArrowLeft className="mr-1 h-4 w-4" />
             Cancel
@@ -319,36 +431,73 @@ PLAN:
           </div>
 
           {/* Voice Recording Button */}
-          <Button
-            type="button"
-            variant={isRecording ? "destructive" : "outline"}
-            onClick={toggleRecording}
-            className="gap-2"
-          >
-            {isRecording ? (
-              <>
-                <MicOff className="h-4 w-4" />
-                Stop Recording
-              </>
-            ) : (
-              <>
-                <Mic className="h-4 w-4" />
-                Start Recording
-              </>
+          <div className="flex items-center gap-2">
+            {recordingState.isRecording && (
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-1.5 rounded-full">
+                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-sm font-medium">
+                  {formatDuration(recordingState.duration)}
+                </span>
+              </div>
             )}
-          </Button>
+            <Button
+              type="button"
+              variant={recordingState.isRecording ? "destructive" : "outline"}
+              onClick={toggleRecording}
+              disabled={isProcessing}
+              className="gap-2"
+            >
+              {recordingState.isRecording ? (
+                <>
+                  <Square className="h-4 w-4" />
+                  Stop & Process
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4" />
+                  Start Recording
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="p-6 max-w-4xl">
         {/* Recording Indicator */}
-        {isRecording && (
+        {recordingState.isRecording && (
           <div className="mb-6 rounded-lg bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-3">
             <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
             <p className="text-sm text-red-700 font-medium">
               Recording in progress... Speak naturally and describe the encounter.
             </p>
+          </div>
+        )}
+
+        {/* Processing Indicator */}
+        {isProcessing && (
+          <div className="mb-6 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 flex items-center gap-3">
+            <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+            <div>
+              <p className="text-sm text-blue-700 font-medium">{processingMessage}</p>
+              <p className="text-xs text-blue-600 mt-0.5">
+                This may take a moment depending on recording length
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* AI Generated Notice */}
+        {transcript && processingState === "idle" && (
+          <div className="mb-6 rounded-lg bg-purple-50 border border-purple-200 px-4 py-3 flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-purple-600" />
+            <div>
+              <p className="text-sm text-purple-700 font-medium">AI-Generated Note</p>
+              <p className="text-xs text-purple-600 mt-0.5">
+                Review and edit the generated content before saving
+              </p>
+            </div>
           </div>
         )}
 
@@ -360,6 +509,7 @@ PLAN:
               value={encounterType}
               onChange={(e) => handleEncounterTypeChange(e.target.value as EncounterType)}
               options={ENCOUNTER_TYPES}
+              disabled={recordingState.isRecording || isProcessing}
             />
             <p className="text-xs text-muted-foreground mt-1">
               {currentConfig.description}
@@ -374,7 +524,8 @@ PLAN:
                   id="noteFormat"
                   value={noteFormat}
                   onChange={(e) => setNoteFormat(e.target.value as NoteFormat)}
-                  className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  disabled={recordingState.isRecording || isProcessing}
+                  className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
                 >
                   {currentConfig.formatOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -394,7 +545,8 @@ PLAN:
                 id="injuryId"
                 value={injuryId}
                 onChange={(e) => setInjuryId(e.target.value as Id<"injuries"> | "")}
-                className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                disabled={recordingState.isRecording || isProcessing}
+                className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
               >
                 <option value="">No specific injury</option>
                 {activeInjuries?.map((injury) => (
@@ -425,13 +577,14 @@ PLAN:
                 </p>
               </div>
             </div>
-            {noteFormat === "soap" && (
+            {noteFormat === "soap" && !transcript && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={insertSOAPTemplate}
                 className="text-xs"
+                disabled={recordingState.isRecording || isProcessing}
               >
                 Insert Template
               </Button>
@@ -442,7 +595,8 @@ PLAN:
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
               placeholder={currentConfig.placeholders[noteFormat] || currentConfig.placeholders[currentConfig.defaultFormat] || "Enter your documentation..."}
-              className="w-full min-h-[400px] rounded-md border border-slate-200 px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y font-mono"
+              disabled={recordingState.isRecording || isProcessing}
+              className="w-full min-h-[400px] rounded-md border border-slate-200 px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y font-mono disabled:opacity-50 disabled:bg-slate-50"
             />
           </div>
         </div>
@@ -451,7 +605,7 @@ PLAN:
         <div className="mt-4 rounded-lg bg-blue-50 border border-blue-100 px-4 py-3">
           <p className="text-sm text-blue-700">
             <strong>Tip:</strong> Use the voice recording feature to dictate your notes hands-free.
-            AI will help format your transcribed audio into the selected format.
+            AI will transcribe your audio and format it into a structured note.
           </p>
         </div>
 
@@ -461,10 +615,14 @@ PLAN:
             type="button"
             variant="ghost"
             onClick={handleBackToProfile}
+            disabled={recordingState.isRecording || isProcessing}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={isSaving || !noteContent.trim()}>
+          <Button
+            type="submit"
+            disabled={isSaving || !noteContent.trim() || recordingState.isRecording || isProcessing}
+          >
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

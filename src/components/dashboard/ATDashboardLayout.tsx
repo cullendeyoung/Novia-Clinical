@@ -32,10 +32,24 @@ export default function ATDashboardLayout() {
   const [currentPage, setCurrentPage] = useState<ATPage>("my-dashboard");
 
   // State for the EMR 3-column layout
-  const [selectedTeamId, setSelectedTeamId] = useState<Id<"teams"> | null>(null);
+  // We use a special "uninitialized" symbol to track when user hasn't made a selection yet
+  const [selectedTeamIdState, setSelectedTeamIdState] = useState<Id<"teams"> | null | "uninitialized">("uninitialized");
   const [selectedAthleteId, setSelectedAthleteId] = useState<Id<"athletes"> | null>(null);
   const [selectedEncounterId, setSelectedEncounterId] = useState<Id<"encounters"> | null>(null);
   const [viewMode, setViewMode] = useState<ATViewMode>("dashboard");
+
+  // Wrap setSelectedTeamId to handle user selections
+  const setSelectedTeamId = (id: Id<"teams"> | null) => {
+    setSelectedTeamIdState(id);
+  };
+
+  // Compute the effective selectedTeamId:
+  // - If user has made a selection (state is not "uninitialized"), use that
+  // - Otherwise, default to the user's fullTimeTeamId
+  const selectedTeamId: Id<"teams"> | null =
+    selectedTeamIdState === "uninitialized"
+      ? (currentUser?.fullTimeTeamId ?? null)
+      : selectedTeamIdState;
 
   // Show loading while checking auth
   if (isSessionPending || currentUser === undefined) {
