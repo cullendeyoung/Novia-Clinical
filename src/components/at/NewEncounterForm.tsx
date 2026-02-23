@@ -204,6 +204,7 @@ export default function NewEncounterForm() {
 
   const [injuryId, setInjuryId] = useState<Id<"injuries"> | "">("");
   const [newInjuryTitle, setNewInjuryTitle] = useState("");
+  const [rtpStatus, setRtpStatus] = useState<"out" | "limited" | "full">("out");
   const [noteContent, setNoteContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -386,13 +387,13 @@ SUMMARY: ${result.summary}`;
       let linkedInjuryId = injuryId ? (injuryId as Id<"injuries">) : undefined;
 
       if (encounterType === "initial_eval" && newInjuryTitle.trim() && !injuryId) {
-        // Create the new injury
+        // Create the new injury with selected status
         const newInjuryId = await createInjury({
           athleteId: selectedAthleteId,
           injuryDate: new Date().toISOString().split("T")[0],
           bodyRegion: newInjuryTitle.trim(), // Use the title as body region for now
           side: "NA" as const,
-          rtpStatus: "out" as const,
+          rtpStatus: rtpStatus,
         });
         linkedInjuryId = newInjuryId;
       }
@@ -624,23 +625,72 @@ PLAN:
           </div>
         </div>
 
-        {/* New Injury Title - Only shown for Initial Eval */}
+        {/* New Injury Title and Status - Only shown for Initial Eval */}
         {encounterType === "initial_eval" && (
           <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <Label htmlFor="newInjuryTitle" className="text-amber-900 font-medium">
-              New Injury Title
-            </Label>
-            <Input
-              id="newInjuryTitle"
-              value={newInjuryTitle}
-              onChange={(e) => setNewInjuryTitle(e.target.value)}
-              placeholder="e.g., Right Knee ACL Sprain, Left Ankle Inversion"
-              disabled={recordingState.isRecording || isProcessing}
-              className="mt-2 bg-white"
-            />
-            <p className="text-xs text-amber-700 mt-1">
-              Enter a brief title for this new injury (e.g., body part + condition)
-            </p>
+            <div className="mb-4">
+              <Label htmlFor="newInjuryTitle" className="text-amber-900 font-medium">
+                New Injury Title
+              </Label>
+              <Input
+                id="newInjuryTitle"
+                value={newInjuryTitle}
+                onChange={(e) => setNewInjuryTitle(e.target.value)}
+                placeholder="e.g., Right Knee ACL Sprain, Left Ankle Inversion"
+                disabled={recordingState.isRecording || isProcessing}
+                className="mt-2 bg-white"
+              />
+              <p className="text-xs text-amber-700 mt-1">
+                Enter a brief title for this new injury (e.g., body part + condition)
+              </p>
+            </div>
+
+            <div>
+              <Label className="text-amber-900 font-medium mb-2 block">
+                Athlete Status
+              </Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRtpStatus("out")}
+                  disabled={recordingState.isRecording || isProcessing}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    rtpStatus === "out"
+                      ? "bg-red-600 text-white"
+                      : "bg-white text-red-600 border border-red-200 hover:bg-red-50"
+                  } disabled:opacity-50`}
+                >
+                  Out
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRtpStatus("limited")}
+                  disabled={recordingState.isRecording || isProcessing}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    rtpStatus === "limited"
+                      ? "bg-amber-500 text-white"
+                      : "bg-white text-amber-600 border border-amber-200 hover:bg-amber-50"
+                  } disabled:opacity-50`}
+                >
+                  Limited
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRtpStatus("full")}
+                  disabled={recordingState.isRecording || isProcessing}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    rtpStatus === "full"
+                      ? "bg-green-600 text-white"
+                      : "bg-white text-green-600 border border-green-200 hover:bg-green-50"
+                  } disabled:opacity-50`}
+                >
+                  Full
+                </button>
+              </div>
+              <p className="text-xs text-amber-700 mt-1">
+                Select athlete's participation status for this injury
+              </p>
+            </div>
           </div>
         )}
 
