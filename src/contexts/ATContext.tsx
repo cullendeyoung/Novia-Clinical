@@ -5,7 +5,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 export type ATPage = "my-dashboard" | "team-overview" | "emr";
 
 // View modes for the EMR main content area
-export type ATViewMode = "dashboard" | "encounter" | "profile" | "new-encounter" | "start-document" | "rehab-program" | "injury-detail";
+export type ATViewMode = "dashboard" | "encounter" | "profile" | "new-encounter" | "start-document" | "rehab-program" | "injury-detail" | "archived-documents";
 
 // Encounter types
 export type EncounterType = "daily_care" | "soap_followup" | "initial_eval" | "rtp_clearance" | "rehab_program" | "other";

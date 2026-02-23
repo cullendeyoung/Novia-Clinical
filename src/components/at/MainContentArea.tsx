@@ -4,6 +4,7 @@ import EncounterDetail from "./EncounterDetail";
 import NewEncounterForm from "./NewEncounterForm";
 import RehabProgramForm from "./RehabProgramForm";
 import InjuryDetail from "./InjuryDetail";
+import ArchivedDocuments from "./ArchivedDocuments";
 import ATWelcome from "./ATWelcome";
 
 export default function MainContentArea() {
@@ -27,6 +28,8 @@ export default function MainContentArea() {
       return <NewEncounterForm />;
     case "rehab-program":
       return <RehabProgramForm />;
+    case "archived-documents":
+      return <ArchivedDocuments />;
     default:
       return <AthleteProfile />;
   }

@@ -22,7 +22,6 @@ import {
   Edit,
   Heart,
   Archive,
-  RotateCcw,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import EditAthleteForm from "./EditAthleteForm";
@@ -33,8 +32,6 @@ export default function AthleteProfile() {
   const { selectedAthleteId, setViewMode, setSelectedEncounterId, setSelectedInjuryId } = useATContext();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [showArchive, setShowArchive] = useState(false);
-  const [isUnarchiving, setIsUnarchiving] = useState<string | null>(null);
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -71,7 +68,6 @@ export default function AthleteProfile() {
   );
 
   const updateAvailabilityStatus = useMutation(api.athletes.updateAvailabilityStatus);
-  const unarchiveEncounter = useMutation(api.encounters.unarchive);
 
   if (!athlete) {
     return (
@@ -412,7 +408,7 @@ export default function AthleteProfile() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowArchive(!showArchive)}
+                    onClick={() => setViewMode("archived-documents")}
                     className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-7 px-2"
                   >
                     <Archive className="h-3.5 w-3.5 mr-1" />
@@ -475,97 +471,6 @@ export default function AthleteProfile() {
             </div>
           </div>
 
-          {/* Archived Documents Section */}
-          {showArchive && archivedEncounters && archivedEncounters.length > 0 && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50">
-              <div className="border-b border-amber-200 px-5 py-3 flex items-center justify-between bg-amber-100">
-                <h2 className="font-semibold text-amber-900 flex items-center gap-2">
-                  <Archive className="h-4 w-4 text-amber-600" />
-                  Archived Documents
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowArchive(false)}
-                  className="text-amber-700 hover:text-amber-800 hover:bg-amber-200 h-7 px-2"
-                >
-                  Hide
-                </Button>
-              </div>
-              <div className="divide-y divide-amber-200">
-                {archivedEncounters.map((encounter) => (
-                  <div
-                    key={encounter._id}
-                    className="p-4 flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="font-medium text-amber-900">
-                        {encounter.encounterType.replace(/_/g, " ")}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Clock className="h-3 w-3 text-amber-600" />
-                        <p className="text-xs text-amber-700">
-                          {new Date(encounter.encounterDatetime).toLocaleDateString()}
-                        </p>
-                        <span className="text-xs text-amber-600">
-                          • {encounter.providerName}
-                        </span>
-                      </div>
-                      {encounter.archivedAt && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          Archived {new Date(encounter.archivedAt).toLocaleDateString()}
-                          {encounter.archivedByName && ` by ${encounter.archivedByName}`}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          setIsUnarchiving(encounter._id);
-                          try {
-                            await unarchiveEncounter({ encounterId: encounter._id });
-                            toast.success("Document restored from archive");
-                          } catch (error) {
-                            const message = error instanceof Error ? error.message : "Failed to restore document";
-                            toast.error(message);
-                          } finally {
-                            setIsUnarchiving(null);
-                          }
-                        }}
-                        disabled={isUnarchiving === encounter._id}
-                        className="text-amber-700 border-amber-300 hover:bg-amber-100"
-                      >
-                        {isUnarchiving === encounter._id ? (
-                          <span className="flex items-center gap-1">
-                            <span className="h-3 w-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
-                            Restoring...
-                          </span>
-                        ) : (
-                          <>
-                            <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                            Restore
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedEncounterId(encounter._id);
-                          setViewMode("encounter");
-                        }}
-                        className="text-amber-700 hover:bg-amber-100"
-                      >
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Right Column - Athlete Information Box */}
