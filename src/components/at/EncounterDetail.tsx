@@ -11,7 +11,9 @@ import {
   Edit,
   CheckCircle,
   Mic,
+  Upload,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function EncounterDetail() {
   const { selectedEncounterId, setViewMode, setSelectedEncounterId } = useATContext();
@@ -111,6 +113,13 @@ export default function EncounterDetail() {
                 Edit
               </Button>
             )}
+            <Button
+              onClick={() => toast.success("Upload to EMR coming soon!")}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Upload to EMR
+            </Button>
           </div>
         </div>
 

@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Sparkles,
   Square,
+  Upload,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -635,22 +636,37 @@ PLAN:
           >
             Cancel
           </Button>
-          <Button
-            type="submit"
-            disabled={isSaving || !noteContent.trim() || recordingState.isRecording || isProcessing}
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Document
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={isSaving || !noteContent.trim() || recordingState.isRecording || isProcessing}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Document
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              disabled={isSaving || !noteContent.trim() || recordingState.isRecording || isProcessing}
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={(e) => {
+                e.preventDefault();
+                toast.success("Upload to EMR coming soon!");
+              }}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Upload to EMR
+            </Button>
+          </div>
         </div>
       </form>
     </div>

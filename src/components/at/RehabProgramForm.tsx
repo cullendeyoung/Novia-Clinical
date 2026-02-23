@@ -19,6 +19,7 @@ import {
   Mic,
   Square,
   Sparkles,
+  Upload,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -662,22 +663,34 @@ export default function RehabProgramForm() {
           <Button type="button" variant="ghost" onClick={handleBackToProfile}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            disabled={isSaving || !injuryId || injuryId === "new_injury" || !programName.trim()}
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Create Program
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={isSaving || !injuryId || injuryId === "new_injury" || !programName.trim()}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Create Program
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              disabled={isSaving || !injuryId || injuryId === "new_injury" || !programName.trim()}
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => toast.success("Upload to EMR coming soon!")}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Upload to EMR
+            </Button>
+          </div>
         </div>
       </form>
     </div>
