@@ -5,6 +5,7 @@ import { useATContext } from "@/contexts/ATContext";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   ArrowLeft,
   Plus,
@@ -22,6 +23,17 @@ import {
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { useAudioRecorder, formatDuration } from "@/hooks/useAudioRecorder";
+
+type EncounterType = "daily_care" | "soap_followup" | "initial_eval" | "rtp_clearance" | "rehab_program" | "other";
+
+const ENCOUNTER_TYPES: { value: EncounterType; label: string }[] = [
+  { value: "daily_care", label: "Daily Care / Treatment" },
+  { value: "soap_followup", label: "Follow-Up / Progress Note" },
+  { value: "initial_eval", label: "Initial Evaluation" },
+  { value: "rehab_program", label: "Rehab / Exercise Program" },
+  { value: "rtp_clearance", label: "Return-to-Play Clearance" },
+  { value: "other", label: "Other Documentation" },
+];
 
 interface Exercise {
   id: string;
@@ -85,6 +97,14 @@ export default function RehabProgramForm() {
       cancelRecording();
     }
     setViewMode("profile");
+  };
+
+  // Handle switching document types - redirect to NewEncounterForm for non-rehab types
+  const handleDocumentTypeChange = (type: EncounterType) => {
+    if (type !== "rehab_program") {
+      setViewMode("new-encounter");
+    }
+    // If rehab_program is selected, we're already on this form
   };
 
   const handleStartRecording = async () => {
@@ -368,6 +388,55 @@ export default function RehabProgramForm() {
           </div>
         )}
 
+        {/* Document Type & Related Injury Selection */}
+        <div className="grid gap-4 md:grid-cols-2 mb-6">
+          <div>
+            <Label htmlFor="documentType">Document Type</Label>
+            <Select
+              value="rehab_program"
+              onChange={(e) => handleDocumentTypeChange(e.target.value as EncounterType)}
+              options={ENCOUNTER_TYPES}
+              disabled={recordingState.isRecording || isProcessing}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Create exercise program linked to an injury
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="relatedInjury">Related Injury *</Label>
+            <div className="relative">
+              <select
+                id="relatedInjury"
+                value={injuryId}
+                onChange={(e) => handleInjuryChange(e.target.value)}
+                disabled={recordingState.isRecording || isProcessing}
+                className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
+              >
+                <option value="">Select an option...</option>
+                <optgroup label="Active Injuries">
+                  {activeInjuries?.map((injury) => (
+                    <option key={injury._id} value={injury._id}>
+                      {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
+                      {injury.diagnosis && ` - ${injury.diagnosis}`}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Other Options">
+                  <option value="prehab">Prehab / Preventive Program</option>
+                  <option value="new_injury">+ Document New Injury First</option>
+                </optgroup>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            </div>
+            {injuryId === "prehab" && (
+              <p className="mt-1 text-xs text-blue-600">
+                This program will be created as a prehab/preventive program not linked to a specific injury.
+              </p>
+            )}
+          </div>
+        </div>
+
         {/* Program Info */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 mb-6">
           <h2 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
@@ -388,38 +457,6 @@ export default function RehabProgramForm() {
             </div>
 
             <div>
-              <Label htmlFor="injuryId">Linked Injury *</Label>
-              <div className="relative mt-1">
-                <select
-                  id="injuryId"
-                  value={injuryId}
-                  onChange={(e) => handleInjuryChange(e.target.value)}
-                  className="w-full appearance-none rounded-md border border-slate-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="">Select an option...</option>
-                  <optgroup label="Active Injuries">
-                    {activeInjuries?.map((injury) => (
-                      <option key={injury._id} value={injury._id}>
-                        {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
-                        {injury.diagnosis && ` - ${injury.diagnosis}`}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Other Options">
-                    <option value="prehab">Prehab / Preventive Program</option>
-                    <option value="new_injury">+ Document New Injury First</option>
-                  </optgroup>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              </div>
-              {injuryId === "prehab" && (
-                <p className="mt-1 text-xs text-blue-600">
-                  This program will be created as a prehab/preventive program not linked to a specific injury.
-                </p>
-              )}
-            </div>
-
-            <div className="md:col-span-2">
               <Label htmlFor="programDescription">Description</Label>
               <Input
                 id="programDescription"
