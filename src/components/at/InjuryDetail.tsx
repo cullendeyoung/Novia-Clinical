@@ -9,6 +9,7 @@ import {
   Calendar,
   User,
   ChevronRight,
+  ChevronDown,
   Edit,
   Save,
   X,
@@ -17,9 +18,15 @@ import {
   AlertCircle,
   CheckCircle2,
   Dumbbell,
+  Filter,
+  Archive,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Id } from "../../../convex/_generated/dataModel";
+
+type EncounterTypeFilter = "all" | "initial_eval" | "daily_care" | "soap_followup" | "rtp_clearance" | "rehab_program" | "other";
+type VisibilityFilter = "all" | "visible" | "archived";
+type RehabStatusFilter = "all" | "active" | "completed" | "discontinued";
 
 export default function InjuryDetail() {
   const {
@@ -32,6 +39,11 @@ export default function InjuryDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  // Filter states
+  const [docTypeFilter, setDocTypeFilter] = useState<EncounterTypeFilter>("all");
+  const [docVisibilityFilter, setDocVisibilityFilter] = useState<VisibilityFilter>("visible");
+  const [rehabStatusFilter, setRehabStatusFilter] = useState<RehabStatusFilter>("all");
 
   // Editable fields
   const [editMechanism, setEditMechanism] = useState("");
@@ -176,6 +188,28 @@ export default function InjuryDetail() {
     };
     return typeMap[type] || type;
   };
+
+  // Filter encounters based on type and visibility
+  const filteredEncounters = (injuryEncounters || []).filter((enc) => {
+    // Type filter
+    if (docTypeFilter !== "all" && enc.encounterType !== docTypeFilter) {
+      return false;
+    }
+    // Visibility filter
+    if (docVisibilityFilter === "visible" && enc.isArchived) {
+      return false;
+    }
+    if (docVisibilityFilter === "archived" && !enc.isArchived) {
+      return false;
+    }
+    return true;
+  });
+
+  // Filter rehab programs based on status
+  const filteredRehabPrograms = (rehabPrograms || []).filter((program) => {
+    if (rehabStatusFilter === "all") return true;
+    return program.status === rehabStatusFilter;
+  });
 
   const formatBodyRegion = (region: string) => {
     return region
@@ -489,14 +523,50 @@ export default function InjuryDetail() {
 
         {/* Documentation / Encounters */}
         <div className="rounded-xl border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 px-5 py-3 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-blue-500" />
-              Documentation
-            </h2>
-            <span className="text-sm text-muted-foreground">
-              {injuryEncounters?.length || 0} records
-            </span>
+          <div className="border-b border-slate-200 px-5 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-slate-900 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-500" />
+                Documentation
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {filteredEncounters.length} of {injuryEncounters?.length || 0} records
+              </span>
+            </div>
+            {/* Filters */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <Filter className="h-3 w-3" />
+              </div>
+              <div className="relative">
+                <select
+                  value={docTypeFilter}
+                  onChange={(e) => setDocTypeFilter(e.target.value as EncounterTypeFilter)}
+                  className="appearance-none rounded-md border border-slate-200 bg-white px-3 py-1.5 pr-7 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                >
+                  <option value="all">All Types</option>
+                  <option value="initial_eval">Initial Eval</option>
+                  <option value="daily_care">Daily Care</option>
+                  <option value="soap_followup">SOAP Follow-Up</option>
+                  <option value="rtp_clearance">RTP Clearance</option>
+                  <option value="rehab_program">Rehab Program</option>
+                  <option value="other">Other</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
+              </div>
+              <div className="relative">
+                <select
+                  value={docVisibilityFilter}
+                  onChange={(e) => setDocVisibilityFilter(e.target.value as VisibilityFilter)}
+                  className="appearance-none rounded-md border border-slate-200 bg-white px-3 py-1.5 pr-7 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                >
+                  <option value="all">All</option>
+                  <option value="visible">Visible</option>
+                  <option value="archived">Archived</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
           </div>
 
           <div className="divide-y divide-slate-100">
@@ -505,41 +575,54 @@ export default function InjuryDetail() {
                 <Loader2 className="h-6 w-6 text-slate-300 mx-auto mb-2 animate-spin" />
                 <p className="text-sm text-muted-foreground">Loading...</p>
               </div>
-            ) : injuryEncounters.length === 0 ? (
+            ) : filteredEncounters.length === 0 ? (
               <div className="p-5 text-center">
                 <FileText className="h-8 w-8 text-slate-300 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  No documentation yet
+                  {injuryEncounters.length === 0 ? "No documentation yet" : "No matching documents"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Create an encounter from the athlete profile
+                  {injuryEncounters.length === 0
+                    ? "Create an encounter from the athlete profile"
+                    : "Try adjusting your filters"}
                 </p>
               </div>
             ) : (
-              injuryEncounters.map((enc) => (
+              filteredEncounters.map((enc) => (
                 <button
                   key={enc._id}
                   onClick={() => handleViewEncounter(enc._id)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+                  className={`w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors ${
+                    enc.isArchived ? "bg-amber-50/50" : ""
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <div
                       className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                        enc.encounterType === "initial_eval"
-                          ? "bg-blue-100 text-blue-600"
-                          : enc.encounterType === "rtp_clearance"
-                            ? "bg-green-100 text-green-600"
-                            : enc.encounterType === "daily_care"
-                              ? "bg-purple-100 text-purple-600"
-                              : "bg-slate-100 text-slate-600"
+                        enc.isArchived
+                          ? "bg-amber-100 text-amber-600"
+                          : enc.encounterType === "initial_eval"
+                            ? "bg-blue-100 text-blue-600"
+                            : enc.encounterType === "rtp_clearance"
+                              ? "bg-green-100 text-green-600"
+                              : enc.encounterType === "daily_care"
+                                ? "bg-purple-100 text-purple-600"
+                                : "bg-slate-100 text-slate-600"
                       }`}
                     >
-                      <FileText className="h-4 w-4" />
+                      {enc.isArchived ? <Archive className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-900">
-                        {formatEncounterType(enc.encounterType)}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-slate-900">
+                          {formatEncounterType(enc.encounterType)}
+                        </p>
+                        {enc.isArchived && (
+                          <span className="text-[10px] font-medium text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                            Archived
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {new Date(enc.encounterDatetime).toLocaleDateString()} •{" "}
                         {enc.providerName}
@@ -555,14 +638,35 @@ export default function InjuryDetail() {
 
         {/* Rehab Programs */}
         <div className="rounded-xl border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 px-5 py-3 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900 flex items-center gap-2">
-              <Dumbbell className="h-4 w-4 text-purple-500" />
-              Rehab Programs
-            </h2>
-            <span className="text-sm text-muted-foreground">
-              {rehabPrograms?.length || 0} programs
-            </span>
+          <div className="border-b border-slate-200 px-5 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-slate-900 flex items-center gap-2">
+                <Dumbbell className="h-4 w-4 text-purple-500" />
+                Rehab Programs
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {filteredRehabPrograms.length} of {rehabPrograms?.length || 0} programs
+              </span>
+            </div>
+            {/* Filter */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <Filter className="h-3 w-3" />
+              </div>
+              <div className="relative">
+                <select
+                  value={rehabStatusFilter}
+                  onChange={(e) => setRehabStatusFilter(e.target.value as RehabStatusFilter)}
+                  className="appearance-none rounded-md border border-slate-200 bg-white px-3 py-1.5 pr-7 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="discontinued">Discontinued</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
           </div>
 
           <div className="divide-y divide-slate-100">
@@ -571,18 +675,20 @@ export default function InjuryDetail() {
                 <Loader2 className="h-6 w-6 text-slate-300 mx-auto mb-2 animate-spin" />
                 <p className="text-sm text-muted-foreground">Loading...</p>
               </div>
-            ) : rehabPrograms.length === 0 ? (
+            ) : filteredRehabPrograms.length === 0 ? (
               <div className="p-5 text-center">
                 <Dumbbell className="h-8 w-8 text-slate-300 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  No rehab programs yet
+                  {rehabPrograms.length === 0 ? "No rehab programs yet" : "No matching programs"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Create a rehab program from the athlete profile
+                  {rehabPrograms.length === 0
+                    ? "Create a rehab program from the athlete profile"
+                    : "Try adjusting your filter"}
                 </p>
               </div>
             ) : (
-              rehabPrograms.map((program) => (
+              filteredRehabPrograms.map((program) => (
                 <div
                   key={program._id}
                   className="px-5 py-4"
@@ -607,7 +713,7 @@ export default function InjuryDetail() {
                         Started: {program.startDate} • {program.exerciseCount} exercises
                       </p>
                     </div>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
                       program.status === "active"
                         ? "bg-purple-100 text-purple-700"
                         : program.status === "completed"

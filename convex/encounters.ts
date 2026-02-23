@@ -125,6 +125,7 @@ export const getByInjury = query({
       assessmentText: v.optional(v.string()),
       planText: v.optional(v.string()),
       isSignedOff: v.boolean(),
+      isArchived: v.boolean(),
     })
   ),
   handler: async (ctx, args) => {
@@ -141,7 +142,7 @@ export const getByInjury = query({
 
     const result = await Promise.all(
       encounters
-        .filter((e) => !e.isDeleted && !e.isArchived)
+        .filter((e) => !e.isDeleted)
         .map(async (enc) => {
           const provider = await ctx.db.get(enc.providerUserId);
           return {
@@ -154,6 +155,7 @@ export const getByInjury = query({
             assessmentText: enc.assessmentText,
             planText: enc.planText,
             isSignedOff: !!enc.signedOffByUserId,
+            isArchived: !!enc.isArchived,
           };
         })
     );
