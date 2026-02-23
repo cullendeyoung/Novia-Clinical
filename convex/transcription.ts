@@ -119,7 +119,7 @@ export const getTranscriptionStatusInternal = internalAction({
 });
 
 /**
- * Internal: Generate SOAP note from transcript using AI
+ * Internal: Generate SOAP note from transcript using OpenAI
  */
 export const generateSOAPNoteInternal = internalAction({
   args: {
@@ -136,9 +136,9 @@ export const generateSOAPNoteInternal = internalAction({
     summary: v.string(),
   }),
   handler: async (_, args) => {
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
-    if (!anthropicKey) {
-      throw new Error("ANTHROPIC_API_KEY environment variable is not set");
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) {
+      throw new Error("OPENAI_API_KEY environment variable is not set");
     }
 
     const systemPrompt = `You are a medical documentation assistant helping athletic trainers create clinical notes.
@@ -149,7 +149,16 @@ Important guidelines:
 - Use professional medical terminology
 - Be concise but comprehensive
 - If information for a section is not mentioned, note "Not documented" rather than making assumptions
-- Focus on athletic training context (sports injuries, rehabilitation, return-to-play)`;
+- Focus on athletic training context (sports injuries, rehabilitation, return-to-play)
+
+Always respond with valid JSON in this exact format:
+{
+  "subjective": "Patient-reported symptoms, history, and chief complaint",
+  "objective": "Clinical findings, measurements, test results",
+  "assessment": "Clinical impression and diagnosis",
+  "plan": "Treatment plan and follow-up",
+  "summary": "Brief 1-2 sentence summary of the encounter"
+}`;
 
     const userPrompt = `Convert this voice transcript from an athletic training encounter into a SOAP note.
 
@@ -160,56 +169,39 @@ Encounter Type: ${args.encounterType}
 Transcript:
 """
 ${args.transcript}
-"""
+"""`;
 
-Please provide the note in this exact JSON format:
-{
-  "subjective": "Patient-reported symptoms, history, and chief complaint",
-  "objective": "Clinical findings, measurements, test results",
-  "assessment": "Clinical impression and diagnosis",
-  "plan": "Treatment plan and follow-up",
-  "summary": "Brief 1-2 sentence summary of the encounter"
-}`;
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${openaiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
+        model: "gpt-4o",
         messages: [
-          {
-            role: "user",
-            content: userPrompt,
-          },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
         ],
-        system: systemPrompt,
+        temperature: 0.3,
+        response_format: { type: "json_object" },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    const content = result.content[0]?.text;
+    const content = result.choices?.[0]?.message?.content;
 
     if (!content) {
       throw new Error("No response from AI");
     }
 
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("No JSON found in response");
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(content);
 
       return {
         subjective: parsed.subjective || "Not documented",
@@ -322,7 +314,7 @@ export const getTranscriptionStatus = action({
 });
 
 /**
- * Generate SOAP note from transcript using AI
+ * Generate SOAP note from transcript using OpenAI
  */
 export const generateSOAPNote = action({
   args: {
@@ -339,9 +331,9 @@ export const generateSOAPNote = action({
     summary: v.string(),
   }),
   handler: async (_, args) => {
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
-    if (!anthropicKey) {
-      throw new Error("ANTHROPIC_API_KEY environment variable is not set");
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) {
+      throw new Error("OPENAI_API_KEY environment variable is not set");
     }
 
     const systemPrompt = `You are a medical documentation assistant helping athletic trainers create clinical notes.
@@ -352,7 +344,16 @@ Important guidelines:
 - Use professional medical terminology
 - Be concise but comprehensive
 - If information for a section is not mentioned, note "Not documented" rather than making assumptions
-- Focus on athletic training context (sports injuries, rehabilitation, return-to-play)`;
+- Focus on athletic training context (sports injuries, rehabilitation, return-to-play)
+
+Always respond with valid JSON in this exact format:
+{
+  "subjective": "Patient-reported symptoms, history, and chief complaint",
+  "objective": "Clinical findings, measurements, test results",
+  "assessment": "Clinical impression and diagnosis",
+  "plan": "Treatment plan and follow-up",
+  "summary": "Brief 1-2 sentence summary of the encounter"
+}`;
 
     const userPrompt = `Convert this voice transcript from an athletic training encounter into a SOAP note.
 
@@ -363,58 +364,39 @@ Encounter Type: ${args.encounterType}
 Transcript:
 """
 ${args.transcript}
-"""
+"""`;
 
-Please provide the note in this exact JSON format:
-{
-  "subjective": "Patient-reported symptoms, history, and chief complaint",
-  "objective": "Clinical findings, measurements, test results",
-  "assessment": "Clinical impression and diagnosis",
-  "plan": "Treatment plan and follow-up",
-  "summary": "Brief 1-2 sentence summary of the encounter"
-}`;
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${openaiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
+        model: "gpt-4o",
         messages: [
-          {
-            role: "user",
-            content: userPrompt,
-          },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
         ],
-        system: systemPrompt,
+        temperature: 0.3,
+        response_format: { type: "json_object" },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    const content = result.content[0]?.text;
+    const content = result.choices?.[0]?.message?.content;
 
     if (!content) {
       throw new Error("No response from AI");
     }
 
-    // Parse the JSON response
     try {
-      // Extract JSON from the response (it might be wrapped in markdown code blocks)
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("No JSON found in response");
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(content);
 
       return {
         subjective: parsed.subjective || "Not documented",
@@ -424,7 +406,6 @@ Please provide the note in this exact JSON format:
         summary: parsed.summary || "Encounter documented",
       };
     } catch {
-      // If parsing fails, return the raw content as summary
       return {
         subjective: content,
         objective: "Not documented",
