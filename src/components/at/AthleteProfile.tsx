@@ -36,6 +36,7 @@ export default function AthleteProfile() {
   const [selectedInjuryId, setSelectedInjuryId] = useState<string | null>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [isUnarchiving, setIsUnarchiving] = useState<string | null>(null);
+  const [updatingInjuryStatus, setUpdatingInjuryStatus] = useState<string | null>(null);
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -79,6 +80,8 @@ export default function AthleteProfile() {
 
   const updateAvailabilityStatus = useMutation(api.athletes.updateAvailabilityStatus);
   const unarchiveEncounter = useMutation(api.encounters.unarchive);
+  const updateInjury = useMutation(api.injuries.update);
+  const resolveInjury = useMutation(api.injuries.resolve);
 
   if (!athlete) {
     return (
@@ -294,46 +297,140 @@ export default function AthleteProfile() {
                         </div>
                       </div>
                     </button>
-                    {/* Injury Documentation - shown when injury is selected */}
+                    {/* Injury Details - shown when injury is selected */}
                     {selectedInjuryId === injury._id && (
-                      <div className="bg-amber-50 border-t border-amber-200 px-4 py-3">
-                        <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-2">
-                          Documentation for this injury
-                        </p>
-                        {!injuryEncounters ? (
-                          <p className="text-sm text-amber-700">Loading...</p>
-                        ) : injuryEncounters.length === 0 ? (
-                          <p className="text-sm text-amber-700 italic">No documentation yet</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {injuryEncounters.map((enc) => (
-                              <button
-                                key={enc._id}
-                                onClick={() => {
-                                  setSelectedEncounterId(enc._id);
-                                  setViewMode("encounter");
-                                }}
-                                className="w-full flex items-center justify-between bg-white rounded-lg px-3 py-2 text-left hover:bg-amber-100 transition-colors border border-amber-200"
-                              >
-                                <div>
-                                  <p className="text-sm font-medium text-slate-900">
-                                    {enc.encounterType === "initial_eval"
-                                      ? "Initial Eval"
-                                      : enc.encounterType === "soap_followup"
-                                        ? "Follow-Up"
-                                        : enc.encounterType === "daily_care"
-                                          ? "Daily Care"
-                                          : enc.encounterType}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {new Date(enc.encounterDatetime).toLocaleDateString()} • {enc.providerName}
-                                  </p>
-                                </div>
-                                <ChevronRight className="h-4 w-4 text-slate-400" />
-                              </button>
-                            ))}
+                      <div className="bg-amber-50 border-t border-amber-200 px-4 py-3 space-y-4">
+                        {/* Change Status Section */}
+                        <div>
+                          <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-2">
+                            Change Status
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                setUpdatingInjuryStatus(injury._id);
+                                try {
+                                  await updateInjury({ injuryId: injury._id as Id<"injuries">, rtpStatus: "out" });
+                                  toast.success("Status updated to Out");
+                                } catch {
+                                  toast.error("Failed to update status");
+                                } finally {
+                                  setUpdatingInjuryStatus(null);
+                                }
+                              }}
+                              disabled={updatingInjuryStatus === injury._id || injury.rtpStatus === "out"}
+                              className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                injury.rtpStatus === "out"
+                                  ? "bg-red-600 text-white"
+                                  : "bg-white text-red-600 border border-red-200 hover:bg-red-50"
+                              } disabled:opacity-50`}
+                            >
+                              Out
+                            </button>
+                            <button
+                              onClick={async () => {
+                                setUpdatingInjuryStatus(injury._id);
+                                try {
+                                  await updateInjury({ injuryId: injury._id as Id<"injuries">, rtpStatus: "limited" });
+                                  toast.success("Status updated to Limited");
+                                } catch {
+                                  toast.error("Failed to update status");
+                                } finally {
+                                  setUpdatingInjuryStatus(null);
+                                }
+                              }}
+                              disabled={updatingInjuryStatus === injury._id || injury.rtpStatus === "limited"}
+                              className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                injury.rtpStatus === "limited"
+                                  ? "bg-amber-500 text-white"
+                                  : "bg-white text-amber-600 border border-amber-200 hover:bg-amber-50"
+                              } disabled:opacity-50`}
+                            >
+                              Limited
+                            </button>
+                            <button
+                              onClick={async () => {
+                                setUpdatingInjuryStatus(injury._id);
+                                try {
+                                  await updateInjury({ injuryId: injury._id as Id<"injuries">, rtpStatus: "full" });
+                                  toast.success("Status updated to Full");
+                                } catch {
+                                  toast.error("Failed to update status");
+                                } finally {
+                                  setUpdatingInjuryStatus(null);
+                                }
+                              }}
+                              disabled={updatingInjuryStatus === injury._id || injury.rtpStatus === "full"}
+                              className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                                injury.rtpStatus === "full"
+                                  ? "bg-green-600 text-white"
+                                  : "bg-white text-green-600 border border-green-200 hover:bg-green-50"
+                              } disabled:opacity-50`}
+                            >
+                              Full
+                            </button>
                           </div>
-                        )}
+                          {/* Clear/Resolve Injury Button */}
+                          <button
+                            onClick={async () => {
+                              setUpdatingInjuryStatus(injury._id);
+                              try {
+                                await resolveInjury({ injuryId: injury._id as Id<"injuries"> });
+                                toast.success("Injury marked as resolved");
+                                setSelectedInjuryId(null);
+                              } catch {
+                                toast.error("Failed to resolve injury");
+                              } finally {
+                                setUpdatingInjuryStatus(null);
+                              }
+                            }}
+                            disabled={updatingInjuryStatus === injury._id}
+                            className="w-full mt-2 px-3 py-2 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                          >
+                            {updatingInjuryStatus === injury._id ? "Updating..." : "Mark as Cleared / Resolved"}
+                          </button>
+                        </div>
+
+                        {/* Documentation Section */}
+                        <div>
+                          <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-2">
+                            Documentation for this injury
+                          </p>
+                          {!injuryEncounters ? (
+                            <p className="text-sm text-amber-700">Loading...</p>
+                          ) : injuryEncounters.length === 0 ? (
+                            <p className="text-sm text-amber-700 italic">No documentation yet</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {injuryEncounters.map((enc) => (
+                                <button
+                                  key={enc._id}
+                                  onClick={() => {
+                                    setSelectedEncounterId(enc._id);
+                                    setViewMode("encounter");
+                                  }}
+                                  className="w-full flex items-center justify-between bg-white rounded-lg px-3 py-2 text-left hover:bg-amber-100 transition-colors border border-amber-200"
+                                >
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-900">
+                                      {enc.encounterType === "initial_eval"
+                                        ? "Initial Eval"
+                                        : enc.encounterType === "soap_followup"
+                                          ? "Follow-Up"
+                                          : enc.encounterType === "daily_care"
+                                            ? "Daily Care"
+                                            : enc.encounterType}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {new Date(enc.encounterDatetime).toLocaleDateString()} • {enc.providerName}
+                                    </p>
+                                  </div>
+                                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
