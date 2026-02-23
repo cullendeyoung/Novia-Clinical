@@ -5,7 +5,7 @@ import { api } from "../../../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import FullPageSpinner from "@/components/ui/FullPageSpinner";
 import { Button } from "@/components/ui/button";
-import { LogOut, ArrowLeft, LayoutDashboard, Users, FileText } from "lucide-react";
+import { LogOut, ArrowLeft, LayoutDashboard, Users, FileText, Eye } from "lucide-react";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { ATContext, type ATViewMode, type ATPage, type EncounterType } from "@/contexts/ATContext";
 import NoviaLogo from "@/components/ui/NoviaLogo";
@@ -154,6 +154,13 @@ export default function ATDashboardLayout() {
 
           {/* Right: User & Sign Out */}
           <div className="flex items-center gap-3">
+            {/* TEMP: Dev button to preview athlete portal */}
+            <Button asChild variant="outline" size="sm" className="text-purple-600 border-purple-200 hover:bg-purple-50">
+              <Link to="/athlete">
+                <Eye className="mr-1 h-4 w-4" />
+                <span className="hidden sm:inline">Athlete Portal</span>
+              </Link>
+            </Button>
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {currentUser?.fullName || session?.user?.name}
             </span>

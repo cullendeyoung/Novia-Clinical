@@ -5,7 +5,8 @@ import { api } from "../../../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import FullPageSpinner from "@/components/ui/FullPageSpinner";
 import { Button } from "@/components/ui/button";
-import { LogOut, Home, Activity, Dumbbell, FileText, User } from "lucide-react";
+import { LogOut, Home, Activity, Dumbbell, FileText, User, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 import NoviaLogo from "@/components/ui/NoviaLogo";
 import { cn } from "@/lib/utils";
 
@@ -50,8 +51,9 @@ export default function AthleteDashboardLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  // Only athletes can access this portal
-  if (currentUser && currentUser.role !== "athlete") {
+  // Only athletes can access this portal (allow org_admin for dev preview)
+  const isDevPreview = currentUser && (currentUser.role === "org_admin" || currentUser.role === "athletic_trainer");
+  if (currentUser && currentUser.role !== "athlete" && !isDevPreview) {
     return <Navigate to="/auth-router" replace />;
   }
 
@@ -121,6 +123,15 @@ export default function AthleteDashboardLayout() {
 
         {/* Right: User & Sign Out */}
         <div className="flex items-center gap-3">
+          {/* Back to AT button for dev preview */}
+          {isDevPreview && (
+            <Button asChild variant="outline" size="sm" className="text-purple-600 border-purple-200 hover:bg-purple-50">
+              <Link to="/at">
+                <ArrowLeft className="mr-1 h-4 w-4" />
+                <span className="hidden sm:inline">Back to AT</span>
+              </Link>
+            </Button>
+          )}
           <span className="text-sm text-muted-foreground hidden sm:inline">
             {displayName}
           </span>

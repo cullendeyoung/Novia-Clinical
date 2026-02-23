@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Activity, Dumbbell, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Activity, Dumbbell, FileText, AlertCircle, CheckCircle2, Eye } from "lucide-react";
 
 export default function AthleteHome() {
   const profile = useQuery(api.athletePortal.getMyProfile);
@@ -8,10 +8,29 @@ export default function AthleteHome() {
   const rehabPrograms = useQuery(api.athletePortal.getMyRehabPrograms);
   const recentEncounters = useQuery(api.athletePortal.getMyEncounters, { limit: 3 });
 
-  if (!profile) {
+  // Loading state
+  if (profile === undefined) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  // Dev preview mode - no athlete profile linked
+  if (profile === null) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-6 text-center">
+          <Eye className="h-12 w-12 text-purple-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-purple-900">Athlete Portal Preview</h2>
+          <p className="text-purple-700 mt-2">
+            You're viewing this portal as an admin/AT. No athlete profile is linked to your account.
+          </p>
+          <p className="text-purple-600 text-sm mt-4">
+            To see real data, an athlete user would need to log in with their account that's linked to an athlete record.
+          </p>
+        </div>
       </div>
     );
   }
