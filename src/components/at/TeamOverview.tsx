@@ -427,7 +427,7 @@ export default function TeamOverview() {
                               ? "Out"
                               : injury.rtpStatus === "limited"
                                 ? "Limited"
-                                : "Full"}
+                                : "Full Participation"}
                           </span>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             Day {injury.daysSinceInjury}

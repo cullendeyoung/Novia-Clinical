@@ -216,7 +216,7 @@ export default function AthleteProfile() {
                 >
                   {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
                   <span className="text-xs opacity-75">
-                    • {injury.rtpStatus === "out" ? "Out" : injury.rtpStatus === "limited" ? "Limited" : "Full"}
+                    • {injury.rtpStatus === "out" ? "Out" : injury.rtpStatus === "limited" ? "Limited" : "Full Participation"}
                   </span>
                 </span>
               ))}
@@ -274,7 +274,7 @@ export default function AthleteProfile() {
                               ? "bg-amber-100 text-amber-700"
                               : "bg-green-100 text-green-700"
                         }`}>
-                          {injury.rtpStatus === "out" ? "Out" : injury.rtpStatus === "limited" ? "Limited" : "Full"}
+                          {injury.rtpStatus === "out" ? "Out" : injury.rtpStatus === "limited" ? "Limited" : "Full Participation"}
                         </span>
                         <ChevronRight className="h-4 w-4 text-slate-400" />
                       </div>
