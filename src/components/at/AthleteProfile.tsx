@@ -128,7 +128,6 @@ export default function AthleteProfile() {
   };
 
   // Check if sections have data
-  const hasEmergencyContact = athlete.emergencyContactName || athlete.emergencyContact2Name;
   const hasMedicalInfo = athlete.allergies || athlete.medications || athlete.medicalConditions || athlete.previousSurgeries || athlete.previousInjuries;
   const hasInsurance = athlete.insuranceProvider || athlete.insurancePolicyNumber;
 
@@ -452,59 +451,41 @@ export default function AthleteProfile() {
               </Button>
             </div>
 
-            {/* Personal Information - Always visible summary */}
-            <div className="border-b border-slate-100">
-              <button
-                onClick={() => toggleSection("personal")}
-                className="w-full px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors"
-              >
-                <span className="font-medium text-slate-700 flex items-center gap-2">
-                  <User className="h-4 w-4 text-blue-500" />
-                  Personal Info
-                </span>
-                {expandedSections.personal ? (
-                  <ChevronDown className="h-4 w-4 text-slate-400" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
-                )}
-              </button>
-              {expandedSections.personal && (
-                <div className="px-5 pb-4 space-y-2">
-                  {athlete.email && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-slate-600">{athlete.email}</span>
-                    </div>
-                  )}
-                  {athlete.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-slate-600">{athlete.phone}</span>
-                    </div>
-                  )}
-                  {athlete.dateOfBirth && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-slate-600">
-                        {new Date(athlete.dateOfBirth).toLocaleDateString()}
-                        {athlete.sex && ` • ${athlete.sex === "M" ? "Male" : athlete.sex === "F" ? "Female" : "Other"}`}
-                      </span>
-                    </div>
-                  )}
-                  {(athlete.heightInches || athlete.weightLbs) && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-slate-600">
-                        {athlete.heightInches && formatHeight(athlete.heightInches)}
-                        {athlete.heightInches && athlete.weightLbs && " • "}
-                        {athlete.weightLbs && `${athlete.weightLbs} lbs`}
-                      </span>
-                    </div>
-                  )}
-                  {!athlete.email && !athlete.phone && !athlete.dateOfBirth && !athlete.heightInches && !athlete.weightLbs && (
-                    <p className="text-sm text-muted-foreground italic">No personal info on file</p>
-                  )}
+            {/* Personal Information - Always visible */}
+            <div className="px-5 py-4 space-y-2 border-b border-slate-100">
+              {athlete.email && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-slate-600">{athlete.email}</span>
                 </div>
+              )}
+              {athlete.phone && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-slate-600">{athlete.phone}</span>
+                </div>
+              )}
+              {athlete.dateOfBirth && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-slate-600">
+                    {new Date(athlete.dateOfBirth).toLocaleDateString()}
+                    {athlete.sex && ` • ${athlete.sex === "M" ? "Male" : athlete.sex === "F" ? "Female" : "Other"}`}
+                  </span>
+                </div>
+              )}
+              {(athlete.heightInches || athlete.weightLbs) && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-slate-600">
+                    {athlete.heightInches && formatHeight(athlete.heightInches)}
+                    {athlete.heightInches && athlete.weightLbs && " • "}
+                    {athlete.weightLbs && `${athlete.weightLbs} lbs`}
+                  </span>
+                </div>
+              )}
+              {!athlete.email && !athlete.phone && !athlete.dateOfBirth && !athlete.heightInches && !athlete.weightLbs && (
+                <p className="text-sm text-muted-foreground italic">No personal info on file</p>
               )}
             </div>
 
@@ -517,9 +498,6 @@ export default function AthleteProfile() {
                 <span className="font-medium text-slate-700 flex items-center gap-2">
                   <Phone className="h-4 w-4 text-amber-500" />
                   Emergency Contact
-                  {hasEmergencyContact && (
-                    <span className="text-xs text-green-600 bg-green-100 px-1.5 py-0.5 rounded">On file</span>
-                  )}
                 </span>
                 {expandedSections.emergency ? (
                   <ChevronDown className="h-4 w-4 text-slate-400" />
@@ -528,30 +506,34 @@ export default function AthleteProfile() {
                 )}
               </button>
               {expandedSections.emergency && (
-                <div className="px-5 pb-4 space-y-3">
+                <div className="px-5 pb-4 space-y-2">
                   {athlete.emergencyContactName ? (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase">Primary</p>
-                      <p className="font-medium text-slate-900">{athlete.emergencyContactName}</p>
-                      {athlete.emergencyContactPhone && (
-                        <p className="text-sm text-slate-600">{athlete.emergencyContactPhone}</p>
-                      )}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-slate-900 font-medium">{athlete.emergencyContactName}</span>
                       {athlete.emergencyContactRelationship && (
-                        <p className="text-xs text-muted-foreground">{athlete.emergencyContactRelationship}</p>
+                        <span className="text-muted-foreground">({athlete.emergencyContactRelationship})</span>
+                      )}
+                      {athlete.emergencyContactPhone && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-slate-600">{athlete.emergencyContactPhone}</span>
+                        </>
                       )}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground italic">No emergency contact on file</p>
                   )}
                   {athlete.emergencyContact2Name && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase">Secondary</p>
-                      <p className="font-medium text-slate-900">{athlete.emergencyContact2Name}</p>
-                      {athlete.emergencyContact2Phone && (
-                        <p className="text-sm text-slate-600">{athlete.emergencyContact2Phone}</p>
-                      )}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-slate-900 font-medium">{athlete.emergencyContact2Name}</span>
                       {athlete.emergencyContact2Relationship && (
-                        <p className="text-xs text-muted-foreground">{athlete.emergencyContact2Relationship}</p>
+                        <span className="text-muted-foreground">({athlete.emergencyContact2Relationship})</span>
+                      )}
+                      {athlete.emergencyContact2Phone && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-slate-600">{athlete.emergencyContact2Phone}</span>
+                        </>
                       )}
                     </div>
                   )}
