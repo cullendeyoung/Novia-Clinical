@@ -189,6 +189,8 @@ export default function NewEncounterForm() {
 
   const createEncounter = useMutation(api.encounters.create);
   const createInjury = useMutation(api.injuries.create);
+  const updateInjury = useMutation(api.injuries.update);
+  const resolveInjury = useMutation(api.injuries.resolve);
   const generateUploadUrl = useMutation(api.encounters.generateUploadUrl);
   const processAmbientRecording = useAction(api.transcription.processAmbientRecording);
 
@@ -205,6 +207,7 @@ export default function NewEncounterForm() {
   const [injuryId, setInjuryId] = useState<Id<"injuries"> | "">("");
   const [newInjuryTitle, setNewInjuryTitle] = useState("");
   const [rtpStatus, setRtpStatus] = useState<"out" | "limited" | "full">("out");
+  const [clearanceStatus, setClearanceStatus] = useState<"full" | "limited">("full");
   const [noteContent, setNoteContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -396,6 +399,22 @@ SUMMARY: ${result.summary}`;
           rtpStatus: rtpStatus,
         });
         linkedInjuryId = newInjuryId;
+      }
+
+      // For RTP Clearance, update the injury status based on clearance selection
+      if (encounterType === "rtp_clearance" && linkedInjuryId) {
+        if (clearanceStatus === "full") {
+          // Full clearance - resolve the injury (marks as healed, rtpStatus: full)
+          await resolveInjury({
+            injuryId: linkedInjuryId,
+          });
+        } else {
+          // Limited clearance - update injury to limited status
+          await updateInjury({
+            injuryId: linkedInjuryId,
+            rtpStatus: "limited",
+          });
+        }
       }
 
       const encounterId = await createEncounter({
@@ -691,6 +710,46 @@ PLAN:
                 Select athlete's participation status for this injury
               </p>
             </div>
+          </div>
+        )}
+
+        {/* RTP Clearance Status - Only shown for RTP Clearance with selected injury */}
+        {encounterType === "rtp_clearance" && injuryId && (
+          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
+            <Label className="text-green-900 font-medium mb-2 block">
+              Clearance Level
+            </Label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setClearanceStatus("full")}
+                disabled={recordingState.isRecording || isProcessing}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  clearanceStatus === "full"
+                    ? "bg-green-600 text-white"
+                    : "bg-white text-green-600 border border-green-200 hover:bg-green-50"
+                } disabled:opacity-50`}
+              >
+                Full Clearance
+              </button>
+              <button
+                type="button"
+                onClick={() => setClearanceStatus("limited")}
+                disabled={recordingState.isRecording || isProcessing}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  clearanceStatus === "limited"
+                    ? "bg-amber-500 text-white"
+                    : "bg-white text-amber-600 border border-amber-200 hover:bg-amber-50"
+                } disabled:opacity-50`}
+              >
+                Limited Clearance
+              </button>
+            </div>
+            <p className="text-xs text-green-700 mt-2">
+              {clearanceStatus === "full"
+                ? "Athlete will be marked as fully cleared and healthy"
+                : "Athlete can participate with restrictions"}
+            </p>
           </div>
         )}
 

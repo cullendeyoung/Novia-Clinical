@@ -14,7 +14,59 @@ import {
   verifyInjuryInOrg,
   logAuditEvent,
   now,
+  type AuthContext,
 } from "./authz";
+import type { MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+
+// =============================================================================
+// Helper: Update athlete availability based on active injuries
+// =============================================================================
+
+/**
+ * Recalculates and updates an athlete's availability status based on their active injuries.
+ * - If any active injury has rtpStatus "out" → athlete is "out"
+ * - Else if any active injury has rtpStatus "limited" → athlete is "limited"
+ * - Else → athlete is "healthy"
+ */
+async function updateAthleteAvailabilityFromInjuries(
+  ctx: MutationCtx,
+  auth: AuthContext,
+  athleteId: Id<"athletes">
+): Promise<void> {
+  // Get all active injuries for this athlete
+  const activeInjuries = await ctx.db
+    .query("injuries")
+    .withIndex("by_athleteId_and_status", (q) =>
+      q.eq("athleteId", athleteId).eq("status", "active")
+    )
+    .collect();
+
+  const nonDeletedInjuries = activeInjuries.filter((i) => !i.isDeleted);
+
+  // Determine the worst status among all active injuries
+  let newStatus: "healthy" | "limited" | "out" = "healthy";
+
+  for (const injury of nonDeletedInjuries) {
+    if (injury.rtpStatus === "out") {
+      newStatus = "out";
+      break; // Can't get worse than "out"
+    } else if (injury.rtpStatus === "limited") {
+      newStatus = "limited"; // Keep checking for "out"
+    }
+    // "full" injuries don't affect status - athlete is healthy for that injury
+  }
+
+  const timestamp = now();
+
+  // Update the athlete's availability status
+  await ctx.db.patch(athleteId, {
+    availabilityStatus: newStatus,
+    availabilityStatusUpdatedAt: timestamp,
+    availabilityStatusUpdatedBy: auth.userId,
+    updatedAt: timestamp,
+  });
+}
 
 // Injury status validator
 const injuryStatusValidator = v.union(
@@ -374,6 +426,9 @@ export const create = mutation({
       side: args.side,
     });
 
+    // Update athlete's availability status based on this new injury
+    await updateAthleteAvailabilityFromInjuries(ctx, auth, args.athleteId);
+
     return injuryId;
   },
 });
@@ -421,6 +476,11 @@ export const update = mutation({
       updates: Object.keys(updates),
     });
 
+    // If rtpStatus changed, update athlete's availability
+    if (args.rtpStatus !== undefined) {
+      await updateAthleteAvailabilityFromInjuries(ctx, auth, injury.athleteId);
+    }
+
     return true;
   },
 });
@@ -459,6 +519,9 @@ export const resolve = mutation({
       bodyRegion: injury.bodyRegion,
       resolvedDate,
     });
+
+    // Recalculate athlete's availability status after resolving injury
+    await updateAthleteAvailabilityFromInjuries(ctx, auth, injury.athleteId);
 
     return true;
   },
@@ -500,6 +563,9 @@ export const reopen = mutation({
       bodyRegion: injury.bodyRegion,
     });
 
+    // Recalculate athlete's availability status after reopening injury
+    await updateAthleteAvailabilityFromInjuries(ctx, auth, injury.athleteId);
+
     return true;
   },
 });
@@ -532,6 +598,9 @@ export const remove = mutation({
         : "Unknown",
       bodyRegion: injury.bodyRegion,
     });
+
+    // Recalculate athlete's availability status after deleting injury
+    await updateAthleteAvailabilityFromInjuries(ctx, auth, injury.athleteId);
 
     return true;
   },
