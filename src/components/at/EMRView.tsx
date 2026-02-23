@@ -82,7 +82,7 @@ export default function EMRView() {
       />
 
       {/* Column 3: Main Content Area */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-y-auto">
         <MainContentArea />
       </div>
     </div>
