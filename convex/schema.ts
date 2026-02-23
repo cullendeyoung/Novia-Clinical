@@ -38,6 +38,13 @@ const rtpStatusValidator = v.union(
   v.literal("out")
 );
 
+// Athlete availability status (manual override by AT)
+const availabilityStatusValidator = v.union(
+  v.literal("healthy"),
+  v.literal("limited"),
+  v.literal("out")
+);
+
 // Body side types
 const sideValidator = v.union(
   v.literal("L"),
@@ -216,6 +223,13 @@ export default defineSchema({
     // Profile completion status
     profileCompletedAt: v.optional(v.number()), // When athlete completed their profile
     inviteSentAt: v.optional(v.number()), // When invite email was sent
+
+    // Availability status (manual override by AT)
+    availabilityStatus: v.optional(availabilityStatusValidator), // "healthy", "limited", "out" - defaults to "healthy" if not set
+    availabilityStatusNote: v.optional(v.string()), // Reason for status change
+    availabilityStatusUpdatedAt: v.optional(v.number()), // When status was last updated
+    availabilityStatusUpdatedBy: v.optional(v.id("users")), // AT who updated the status
+
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),

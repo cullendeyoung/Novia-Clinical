@@ -43,11 +43,57 @@ export default function TeamOverview() {
     selectedTeamId ? { teamId: selectedTeamId, limit: 10 } : { limit: 10 }
   );
 
-  // Calculate roster health stats
+  // Create a map of athlete ID to their status
+  // Priority: manual availabilityStatus > injury-derived status
+  const athleteStatusMap = new Map<Id<"athletes">, "healthy" | "limited" | "out">();
+
+  // First, set status based on manual availabilityStatus from athlete records
+  athletes?.forEach((athlete) => {
+    if (athlete.availabilityStatus) {
+      athleteStatusMap.set(athlete._id, athlete.availabilityStatus);
+    }
+  });
+
+  // For athletes without a manual status, derive from their worst injury RTP status
+  activeInjuries?.forEach((injury) => {
+    // Skip if athlete already has a manual status set
+    if (athleteStatusMap.has(injury.athleteId)) return;
+
+    const currentStatus = athleteStatusMap.get(injury.athleteId);
+    // Map injury rtpStatus to our status values
+    const injuryStatus = injury.rtpStatus === "out" ? "out" : injury.rtpStatus === "limited" ? "limited" : "healthy";
+
+    // Priority: out > limited > healthy
+    if (!currentStatus) {
+      athleteStatusMap.set(injury.athleteId, injuryStatus);
+    } else if (injuryStatus === "out") {
+      athleteStatusMap.set(injury.athleteId, "out");
+    } else if (injuryStatus === "limited" && currentStatus !== "out") {
+      athleteStatusMap.set(injury.athleteId, "limited");
+    }
+  });
+
+  // Calculate roster health stats based on the combined status (manual + injury-derived)
   const rosterStats = {
     total: athletes?.length ?? 0,
-    healthy: athletes?.filter((a) => a.activeInjuryCount === 0).length ?? 0,
-    injured: athletes?.filter((a) => a.activeInjuryCount > 0).length ?? 0,
+    healthy: athletes?.filter((a) => {
+      const status = athleteStatusMap.get(a._id);
+      return !status || status === "healthy";
+    }).length ?? 0,
+    injured: athletes?.filter((a) => {
+      const status = athleteStatusMap.get(a._id);
+      return status === "limited" || status === "out";
+    }).length ?? 0,
+  };
+
+  // Calculate status-based stats (counting athletes by their final status)
+  const statusStats = {
+    healthy: athletes?.filter((a) => {
+      const status = athleteStatusMap.get(a._id);
+      return !status || status === "healthy";
+    }).length ?? 0,
+    limited: athletes?.filter((a) => athleteStatusMap.get(a._id) === "limited").length ?? 0,
+    out: athletes?.filter((a) => athleteStatusMap.get(a._id) === "out").length ?? 0,
   };
 
   const injuryStats = {
@@ -56,20 +102,6 @@ export default function TeamOverview() {
     limited: activeInjuries?.filter((i) => i.rtpStatus === "limited").length ?? 0,
     full: activeInjuries?.filter((i) => i.rtpStatus === "full").length ?? 0,
   };
-
-  // Create a map of athlete ID to their worst RTP status
-  const athleteStatusMap = new Map<Id<"athletes">, "full" | "limited" | "out">();
-  activeInjuries?.forEach((injury) => {
-    const currentStatus = athleteStatusMap.get(injury.athleteId);
-    // Priority: out > limited > full
-    if (!currentStatus) {
-      athleteStatusMap.set(injury.athleteId, injury.rtpStatus);
-    } else if (injury.rtpStatus === "out") {
-      athleteStatusMap.set(injury.athleteId, "out");
-    } else if (injury.rtpStatus === "limited" && currentStatus !== "out") {
-      athleteStatusMap.set(injury.athleteId, "limited");
-    }
-  });
 
   const handleGoToEMR = (athleteId: Id<"athletes">) => {
     setSelectedAthleteId(athleteId);
@@ -80,14 +112,22 @@ export default function TeamOverview() {
     const status = athleteStatusMap.get(athleteId);
     if (status === "out") return "bg-red-500";
     if (status === "limited") return "bg-yellow-500";
-    return "bg-green-500";
+    return "bg-green-500"; // healthy or undefined defaults to green
   };
 
   const getStatusLabel = (athleteId: Id<"athletes">) => {
     const status = athleteStatusMap.get(athleteId);
     if (status === "out") return "Out";
     if (status === "limited") return "Limited";
-    return "Healthy";
+    return "Healthy"; // healthy or undefined defaults to Healthy
+  };
+
+  // Get display class for status badge
+  const getStatusBadgeClass = (athleteId: Id<"athletes">) => {
+    const status = athleteStatusMap.get(athleteId);
+    if (status === "out") return "bg-red-100 text-red-700";
+    if (status === "limited") return "bg-yellow-100 text-yellow-700";
+    return "bg-green-100 text-green-700";
   };
 
   return (
@@ -177,7 +217,7 @@ export default function TeamOverview() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Limited</p>
                   <p className="mt-1 text-3xl font-semibold text-amber-600">
-                    {injuryStats.limited}
+                    {statusStats.limited}
                   </p>
                 </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100">
@@ -191,7 +231,7 @@ export default function TeamOverview() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Out</p>
                   <p className="mt-1 text-3xl font-semibold text-red-600">
-                    {injuryStats.out}
+                    {statusStats.out}
                   </p>
                 </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100">
@@ -254,13 +294,7 @@ export default function TeamOverview() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          athleteStatusMap.get(athlete._id) === "out"
-                            ? "bg-red-100 text-red-700"
-                            : athleteStatusMap.get(athlete._id) === "limited"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-green-100 text-green-700"
-                        }`}
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${getStatusBadgeClass(athlete._id)}`}
                       >
                         {getStatusLabel(athlete._id)}
                       </span>

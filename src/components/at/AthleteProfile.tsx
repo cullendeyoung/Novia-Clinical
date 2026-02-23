@@ -1,4 +1,5 @@
-import { useQuery } from "convex/react";
+import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useATContext } from "@/contexts/ATContext";
 import { Button } from "@/components/ui/button";
@@ -17,10 +18,15 @@ import {
   Plus,
   Clock,
   Dumbbell,
+  ChevronDown,
 } from "lucide-react";
+import toast from "react-hot-toast";
+
+type AvailabilityStatus = "healthy" | "limited" | "out";
 
 export default function AthleteProfile() {
   const { selectedAthleteId, setViewMode, setSelectedEncounterId } = useATContext();
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const athlete = useQuery(
     api.athletes.getById,
@@ -41,6 +47,8 @@ export default function AthleteProfile() {
     api.rehabPrograms.getActiveByAthlete,
     selectedAthleteId ? { athleteId: selectedAthleteId } : "skip"
   );
+
+  const updateAvailabilityStatus = useMutation(api.athletes.updateAvailabilityStatus);
 
   if (!athlete) {
     return (
@@ -69,6 +77,38 @@ export default function AthleteProfile() {
     setViewMode("rehab-program");
   };
 
+  const handleStatusChange = async (newStatus: AvailabilityStatus) => {
+    if (!selectedAthleteId) return;
+
+    setIsUpdatingStatus(true);
+    try {
+      await updateAvailabilityStatus({
+        athleteId: selectedAthleteId,
+        status: newStatus,
+      });
+      toast.success(`Status updated to ${newStatus === "healthy" ? "Healthy" : newStatus === "limited" ? "Limited" : "Out"}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update status";
+      toast.error(message);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  // Get current availability status (defaults to healthy if not set)
+  const currentStatus: AvailabilityStatus = athlete?.availabilityStatus ?? "healthy";
+
+  const getStatusStyles = (status: AvailabilityStatus) => {
+    switch (status) {
+      case "healthy":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "limited":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "out":
+        return "bg-red-100 text-red-700 border-red-200";
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50">
       {/* Header */}
@@ -88,10 +128,26 @@ export default function AthleteProfile() {
               </p>
             </div>
           </div>
-          <Button onClick={handleNewEncounter}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Encounter
-          </Button>
+          <div className="flex items-center gap-3">
+            {/* Availability Status Dropdown */}
+            <div className="relative">
+              <select
+                value={currentStatus}
+                onChange={(e) => handleStatusChange(e.target.value as AvailabilityStatus)}
+                disabled={isUpdatingStatus}
+                className={`appearance-none rounded-lg border px-4 py-2 pr-9 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer disabled:opacity-50 ${getStatusStyles(currentStatus)}`}
+              >
+                <option value="healthy">Healthy</option>
+                <option value="limited">Limited</option>
+                <option value="out">Out</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60" />
+            </div>
+            <Button onClick={handleNewEncounter}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Encounter
+            </Button>
+          </div>
         </div>
 
         {/* Active Injuries Alert */}

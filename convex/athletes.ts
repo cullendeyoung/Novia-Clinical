@@ -31,6 +31,11 @@ const sexValidator = v.union(
 /**
  * List athletes for a team
  */
+// Availability status validator for list queries
+const availabilityStatusValidatorForList = v.optional(
+  v.union(v.literal("healthy"), v.literal("limited"), v.literal("out"))
+);
+
 export const listByTeam = query({
   args: {
     teamId: v.id("teams"),
@@ -47,6 +52,7 @@ export const listByTeam = query({
       isActive: v.boolean(),
       activeInjuryCount: v.number(),
       lastEncounterDate: v.optional(v.number()),
+      availabilityStatus: availabilityStatusValidatorForList,
     })
   ),
   handler: async (ctx, args) => {
@@ -103,6 +109,7 @@ export const listByTeam = query({
             lastEncounterDate: lastEncounter?.isDeleted
               ? undefined
               : lastEncounter?.encounterDatetime,
+            availabilityStatus: a.availabilityStatus,
           };
         })
     );
@@ -115,6 +122,11 @@ export const listByTeam = query({
 /**
  * Get a single athlete with full details
  */
+// Availability status validator for return types
+const availabilityStatusValidatorOptional = v.optional(
+  v.union(v.literal("healthy"), v.literal("limited"), v.literal("out"))
+);
+
 export const getById = query({
   args: { athleteId: v.id("athletes") },
   returns: v.union(
@@ -139,6 +151,10 @@ export const getById = query({
       emergencyContactPhone: v.optional(v.string()),
       profileCompletedAt: v.optional(v.number()),
       inviteSentAt: v.optional(v.number()),
+      // Availability status fields
+      availabilityStatus: availabilityStatusValidatorOptional,
+      availabilityStatusNote: v.optional(v.string()),
+      availabilityStatusUpdatedAt: v.optional(v.number()),
       isActive: v.boolean(),
       createdAt: v.number(),
       updatedAt: v.number(),
@@ -174,6 +190,10 @@ export const getById = query({
       emergencyContactPhone: athlete.emergencyContactPhone,
       profileCompletedAt: athlete.profileCompletedAt,
       inviteSentAt: athlete.inviteSentAt,
+      // Availability status
+      availabilityStatus: athlete.availabilityStatus,
+      availabilityStatusNote: athlete.availabilityStatusNote,
+      availabilityStatusUpdatedAt: athlete.availabilityStatusUpdatedAt,
       isActive: athlete.isActive,
       createdAt: athlete.createdAt,
       updatedAt: athlete.updatedAt,
@@ -817,6 +837,50 @@ export const remove = mutation({
     // Log the deletion
     await logAuditEvent(ctx, auth, auth.orgId, "delete", "athlete", args.athleteId, {
       name: `${athlete.firstName} ${athlete.lastName}`,
+    });
+
+    return true;
+  },
+});
+
+// Availability status validator
+const availabilityStatusValidator = v.union(
+  v.literal("healthy"),
+  v.literal("limited"),
+  v.literal("out")
+);
+
+/**
+ * Update an athlete's availability status
+ * This allows ATs to manually set healthy/limited/out status
+ */
+export const updateAvailabilityStatus = mutation({
+  args: {
+    athleteId: v.id("athletes"),
+    status: availabilityStatusValidator,
+    note: v.optional(v.string()),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const auth = await requireAuth(ctx);
+    requirePermission(auth, "athlete", "update");
+
+    const athlete = await verifyAthleteInOrg(ctx, auth, args.athleteId);
+    const timestamp = now();
+
+    await ctx.db.patch(args.athleteId, {
+      availabilityStatus: args.status,
+      availabilityStatusNote: args.note,
+      availabilityStatusUpdatedAt: timestamp,
+      availabilityStatusUpdatedBy: auth.userId,
+      updatedAt: timestamp,
+    });
+
+    // Log the status change
+    await logAuditEvent(ctx, auth, auth.orgId, "update_status", "athlete", args.athleteId, {
+      name: `${athlete.firstName} ${athlete.lastName}`,
+      newStatus: args.status,
+      note: args.note,
     });
 
     return true;
