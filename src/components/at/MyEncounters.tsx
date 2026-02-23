@@ -29,11 +29,18 @@ export default function MyEncounters({ onBack }: MyEncountersProps) {
   } = useATContext();
 
   const [typeFilter, setTypeFilter] = useState<EncounterTypeFilter>("all");
+  const [teamFilter, setTeamFilter] = useState<Id<"teams"> | "all">("all");
 
   const currentUser = useQuery(api.users.getCurrent);
-  const myEncounters = useQuery(api.encounters.listMyEncounters, { limit: 100 });
+  const teams = useQuery(api.teams.list, {});
 
-  // Filter encounters by type
+  // Pass team filter to query if selected
+  const myEncounters = useQuery(
+    api.encounters.listMyEncounters,
+    teamFilter === "all" ? { limit: 100 } : { teamId: teamFilter, limit: 100 }
+  );
+
+  // Filter encounters by type (team filter is applied in query)
   const filteredEncounters = (myEncounters || []).filter((enc) => {
     if (typeFilter === "all") return true;
     return enc.encounterType === typeFilter;
@@ -136,10 +143,25 @@ export default function MyEncounters({ onBack }: MyEncountersProps) {
 
       {/* Filter Bar */}
       <div className="bg-white border-b border-slate-200 px-6 py-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Filter className="h-4 w-4" />
-            <span>Filter by type:</span>
+            <span>Filters:</span>
+          </div>
+          <div className="relative">
+            <select
+              value={teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value as Id<"teams"> | "all")}
+              className="appearance-none rounded-lg border border-slate-200 bg-white px-4 py-2 pr-9 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+            >
+              <option value="all">All Teams</option>
+              {teams?.map((team) => (
+                <option key={team._id} value={team._id}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           </div>
           <div className="relative">
             <select
@@ -172,8 +194,8 @@ export default function MyEncounters({ onBack }: MyEncountersProps) {
             <FileText className="h-12 w-12 text-slate-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-slate-900">No Encounters Found</h3>
             <p className="text-muted-foreground mt-1">
-              {typeFilter !== "all"
-                ? "Try adjusting your filter."
+              {typeFilter !== "all" || teamFilter !== "all"
+                ? "Try adjusting your filters."
                 : "You haven't documented any encounters yet."}
             </p>
             <Button onClick={handleNewDocument} className="mt-4">

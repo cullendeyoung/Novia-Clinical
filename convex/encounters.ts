@@ -289,7 +289,7 @@ export const listRecent = query({
 
     const result = await Promise.all(
       encounters
-        .filter((e) => !e.isDeleted)
+        .filter((e) => !e.isDeleted && !e.isArchived)
         .slice(0, limit)
         .map(async (enc) => {
           const athlete = await ctx.db.get(enc.athleteId);
@@ -336,6 +336,7 @@ export const listRecent = query({
  */
 export const listMyEncounters = query({
   args: {
+    teamId: v.optional(v.id("teams")),
     limit: v.optional(v.number()),
   },
   returns: v.array(
@@ -343,6 +344,7 @@ export const listMyEncounters = query({
       _id: v.id("encounters"),
       athleteId: v.id("athletes"),
       athleteName: v.string(),
+      teamId: v.id("teams"),
       teamName: v.string(),
       encounterType: encounterTypeValidator,
       encounterDatetime: v.number(),
@@ -373,10 +375,14 @@ export const listMyEncounters = query({
           const team = await ctx.db.get(athlete.teamId);
           if (!team) return null;
 
+          // Filter by team if specified
+          if (args.teamId && team._id !== args.teamId) return null;
+
           return {
             _id: enc._id,
             athleteId: enc.athleteId,
             athleteName: `${athlete.firstName} ${athlete.lastName}`,
+            teamId: team._id,
             teamName: team.name,
             encounterType: enc.encounterType,
             encounterDatetime: enc.encounterDatetime,
