@@ -66,8 +66,8 @@ export const getByAthlete = query({
       .order("desc")
       .collect();
 
-    // Filter and enrich
-    let filtered = encounters.filter((e) => !e.isDeleted);
+    // Filter and enrich (exclude deleted and archived)
+    let filtered = encounters.filter((e) => !e.isDeleted && !e.isArchived);
     if (args.encounterType) {
       filtered = filtered.filter((e) => e.encounterType === args.encounterType);
     }
@@ -141,7 +141,7 @@ export const getByInjury = query({
 
     const result = await Promise.all(
       encounters
-        .filter((e) => !e.isDeleted)
+        .filter((e) => !e.isDeleted && !e.isArchived)
         .map(async (enc) => {
           const provider = await ctx.db.get(enc.providerUserId);
           return {
@@ -614,6 +614,130 @@ export const remove = mutation({
     });
 
     return true;
+  },
+});
+
+/**
+ * Archive an encounter (HIPAA compliant - preserves data but hides from main view)
+ */
+export const archive = mutation({
+  args: { encounterId: v.id("encounters") },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const auth = await requireAuth(ctx);
+    requirePermission(auth, "encounter", "update");
+
+    const encounter = await verifyEncounterInOrg(ctx, auth, args.encounterId);
+
+    const timestamp = now();
+
+    await ctx.db.patch(args.encounterId, {
+      isArchived: true,
+      archivedAt: timestamp,
+      archivedByUserId: auth.userId,
+      updatedAt: timestamp,
+    });
+
+    // Log the archive action
+    await logAuditEvent(ctx, auth, auth.orgId, "archive", "encounter", args.encounterId, {
+      encounterType: encounter.encounterType,
+    });
+
+    return true;
+  },
+});
+
+/**
+ * Unarchive an encounter (restore from archive)
+ */
+export const unarchive = mutation({
+  args: { encounterId: v.id("encounters") },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const auth = await requireAuth(ctx);
+    requirePermission(auth, "encounter", "update");
+
+    const encounter = await verifyEncounterInOrg(ctx, auth, args.encounterId);
+
+    if (!encounter.isArchived) {
+      throw new Error("Encounter is not archived");
+    }
+
+    const timestamp = now();
+
+    await ctx.db.patch(args.encounterId, {
+      isArchived: false,
+      archivedAt: undefined,
+      archivedByUserId: undefined,
+      updatedAt: timestamp,
+    });
+
+    // Log the unarchive action
+    await logAuditEvent(ctx, auth, auth.orgId, "unarchive", "encounter", args.encounterId, {
+      encounterType: encounter.encounterType,
+    });
+
+    return true;
+  },
+});
+
+/**
+ * Get archived encounters for an athlete
+ */
+export const getArchivedByAthlete = query({
+  args: { athleteId: v.id("athletes") },
+  returns: v.array(
+    v.object({
+      _id: v.id("encounters"),
+      encounterType: encounterTypeValidator,
+      encounterDatetime: v.number(),
+      providerName: v.string(),
+      injuryBodyRegion: v.optional(v.string()),
+      archivedAt: v.optional(v.number()),
+      archivedByName: v.optional(v.string()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const auth = await requireAuth(ctx);
+    requirePermission(auth, "encounter", "read");
+
+    await verifyAthleteInOrg(ctx, auth, args.athleteId);
+
+    const encounters = await ctx.db
+      .query("encounters")
+      .withIndex("by_athleteId", (q) => q.eq("athleteId", args.athleteId))
+      .collect();
+
+    // Filter for archived, non-deleted encounters
+    const archivedEncounters = encounters.filter(
+      (e) => e.isArchived === true && !e.isDeleted
+    );
+
+    // Enrich with provider and injury info
+    const result = await Promise.all(
+      archivedEncounters.map(async (encounter) => {
+        const provider = await ctx.db.get(encounter.providerUserId);
+        const injury = encounter.injuryId
+          ? await ctx.db.get(encounter.injuryId)
+          : null;
+        const archivedBy = encounter.archivedByUserId
+          ? await ctx.db.get(encounter.archivedByUserId)
+          : null;
+
+        return {
+          _id: encounter._id,
+          encounterType: encounter.encounterType,
+          encounterDatetime: encounter.encounterDatetime,
+          providerName: provider?.fullName || "Unknown",
+          injuryBodyRegion: injury?.bodyRegion,
+          archivedAt: encounter.archivedAt,
+          archivedByName: archivedBy?.fullName,
+        };
+      })
+    );
+
+    // Sort by archived date, most recent first
+    return result.sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
   },
 });
 

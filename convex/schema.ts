@@ -295,6 +295,10 @@ export default defineSchema({
     updatedAt: v.number(),
     isDeleted: v.boolean(),
     deletedAt: v.optional(v.number()),
+    // Archive support (for HIPAA compliance - don't delete, archive instead)
+    isArchived: v.optional(v.boolean()),
+    archivedAt: v.optional(v.number()),
+    archivedByUserId: v.optional(v.id("users")),
   })
     .index("by_orgId", ["orgId"])
     .index("by_athleteId", ["athleteId"])
@@ -303,7 +307,8 @@ export default defineSchema({
     .index("by_encounterType", ["encounterType"])
     .index("by_orgId_and_athleteId", ["orgId", "athleteId"])
     .index("by_orgId_and_encounterDatetime", ["orgId", "encounterDatetime"])
-    .index("by_isDeleted", ["isDeleted"]),
+    .index("by_isDeleted", ["isDeleted"])
+    .index("by_athleteId_and_isArchived", ["athleteId", "isArchived"]),
 
   // Treatments - Treatment details for encounters
   treatments: defineTable({

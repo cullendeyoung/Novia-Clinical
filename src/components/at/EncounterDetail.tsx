@@ -15,7 +15,7 @@ import {
   Save,
   Loader2,
   X,
-  Trash2,
+  Archive,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -23,8 +23,8 @@ export default function EncounterDetail() {
   const { selectedEncounterId, setViewMode, setSelectedEncounterId } = useATContext();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
   // Editable fields
   const [editSubjective, setEditSubjective] = useState("");
@@ -38,7 +38,7 @@ export default function EncounterDetail() {
   );
 
   const updateEncounter = useMutation(api.encounters.update);
-  const deleteEncounter = useMutation(api.encounters.remove);
+  const archiveEncounter = useMutation(api.encounters.archive);
 
   // Initialize edit fields when entering edit mode
   const handleStartEditing = () => {
@@ -77,21 +77,21 @@ export default function EncounterDetail() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     if (!selectedEncounterId) return;
 
-    setIsDeleting(true);
+    setIsArchiving(true);
     try {
-      await deleteEncounter({ encounterId: selectedEncounterId });
-      toast.success("Document deleted successfully");
+      await archiveEncounter({ encounterId: selectedEncounterId });
+      toast.success("Document archived successfully");
       setSelectedEncounterId(null);
       setViewMode("profile");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to delete document";
+      const message = error instanceof Error ? error.message : "Failed to archive document";
       toast.error(message);
     } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
+      setIsArchiving(false);
+      setShowArchiveConfirm(false);
     }
   };
 
@@ -190,30 +190,31 @@ export default function EncounterDetail() {
                   <Edit className="mr-1 h-4 w-4" />
                   Edit
                 </Button>
-                {showDeleteConfirm ? (
+                {showArchiveConfirm ? (
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setShowDeleteConfirm(false)}
-                      disabled={isDeleting}
+                      onClick={() => setShowArchiveConfirm(false)}
+                      disabled={isArchiving}
                     >
                       Cancel
                     </Button>
                     <Button
-                      variant="destructive"
+                      variant="default"
                       size="sm"
-                      onClick={handleDelete}
-                      disabled={isDeleting}
+                      onClick={handleArchive}
+                      disabled={isArchiving}
+                      className="bg-amber-600 hover:bg-amber-700"
                     >
-                      {isDeleting ? (
+                      {isArchiving ? (
                         <>
                           <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                          Deleting...
+                          Archiving...
                         </>
                       ) : (
                         <>
-                          <Trash2 className="mr-1 h-4 w-4" />
+                          <Archive className="mr-1 h-4 w-4" />
                           Confirm
                         </>
                       )}
@@ -223,11 +224,11 @@ export default function EncounterDetail() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => setShowArchiveConfirm(true)}
+                    className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                   >
-                    <Trash2 className="mr-1 h-4 w-4" />
-                    Delete
+                    <Archive className="mr-1 h-4 w-4" />
+                    Archive
                   </Button>
                 )}
               </>
