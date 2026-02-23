@@ -19,14 +19,18 @@ import {
   Clock,
   Dumbbell,
   ChevronDown,
+  Edit,
+  Pill,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import EditAthleteForm from "./EditAthleteForm";
 
 type AvailabilityStatus = "healthy" | "limited" | "out";
 
 export default function AthleteProfile() {
   const { selectedAthleteId, setViewMode, setSelectedEncounterId } = useATContext();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const athlete = useQuery(
     api.athletes.getById,
@@ -109,6 +113,17 @@ export default function AthleteProfile() {
     }
   };
 
+  // Show edit form if editing
+  if (isEditingProfile && selectedAthleteId) {
+    return (
+      <EditAthleteForm
+        athleteId={selectedAthleteId}
+        onClose={() => setIsEditingProfile(false)}
+        onSaved={() => setIsEditingProfile(false)}
+      />
+    );
+  }
+
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50">
       {/* Header */}
@@ -143,6 +158,10 @@ export default function AthleteProfile() {
               </select>
               <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60" />
             </div>
+            <Button variant="outline" onClick={() => setIsEditingProfile(true)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Profile
+            </Button>
             <Button onClick={handleNewEncounter}>
               <Plus className="mr-2 h-4 w-4" />
               New Encounter
@@ -238,6 +257,38 @@ export default function AthleteProfile() {
                   <p className="text-sm text-muted-foreground mt-1">
                     {athlete.emergencyContactPhone}
                   </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Medical Info */}
+          {(athlete.allergies || athlete.medications || athlete.medicalConditions) && (
+            <div className="rounded-xl border border-slate-200 bg-white">
+              <div className="border-b border-slate-200 px-5 py-3">
+                <h2 className="font-semibold text-slate-900 flex items-center gap-2">
+                  <Pill className="h-4 w-4 text-red-500" />
+                  Medical Info
+                </h2>
+              </div>
+              <div className="p-5 space-y-3">
+                {athlete.allergies && (
+                  <div>
+                    <p className="text-xs font-medium text-red-600 uppercase">Allergies</p>
+                    <p className="text-sm text-slate-600 mt-0.5">{athlete.allergies}</p>
+                  </div>
+                )}
+                {athlete.medications && (
+                  <div>
+                    <p className="text-xs font-medium text-blue-600 uppercase">Medications</p>
+                    <p className="text-sm text-slate-600 mt-0.5">{athlete.medications}</p>
+                  </div>
+                )}
+                {athlete.medicalConditions && (
+                  <div>
+                    <p className="text-xs font-medium text-amber-600 uppercase">Conditions</p>
+                    <p className="text-sm text-slate-600 mt-0.5">{athlete.medicalConditions}</p>
+                  </div>
                 )}
               </div>
             </div>

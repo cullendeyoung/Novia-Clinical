@@ -127,6 +127,11 @@ const availabilityStatusValidatorOptional = v.optional(
   v.union(v.literal("healthy"), v.literal("limited"), v.literal("out"))
 );
 
+// Dominant hand validator for return type
+const dominantHandValidatorOptional = v.optional(
+  v.union(v.literal("Left"), v.literal("Right"), v.literal("Ambidextrous"))
+);
+
 export const getById = query({
   args: { athleteId: v.id("athletes") },
   returns: v.union(
@@ -136,19 +141,46 @@ export const getById = query({
       orgId: v.id("organizations"),
       teamId: v.id("teams"),
       teamName: v.string(),
+      // Basic Info
       firstName: v.string(),
       lastName: v.string(),
+      preferredName: v.optional(v.string()),
       email: v.optional(v.string()),
+      phone: v.optional(v.string()),
       dateOfBirth: v.optional(v.string()),
       sex: v.optional(sexValidator),
+      // Athletic Info
       classYear: v.optional(v.string()),
       jerseyNumber: v.optional(v.string()),
       position: v.optional(v.string()),
       heightInches: v.optional(v.number()),
       weightLbs: v.optional(v.number()),
-      notes: v.optional(v.string()),
+      dominantHand: dominantHandValidatorOptional,
+      // Emergency Contacts
       emergencyContactName: v.optional(v.string()),
       emergencyContactPhone: v.optional(v.string()),
+      emergencyContactRelationship: v.optional(v.string()),
+      emergencyContact2Name: v.optional(v.string()),
+      emergencyContact2Phone: v.optional(v.string()),
+      emergencyContact2Relationship: v.optional(v.string()),
+      // Medical History
+      allergies: v.optional(v.string()),
+      medications: v.optional(v.string()),
+      medicalConditions: v.optional(v.string()),
+      previousSurgeries: v.optional(v.string()),
+      previousInjuries: v.optional(v.string()),
+      // Insurance
+      insuranceProvider: v.optional(v.string()),
+      insurancePolicyNumber: v.optional(v.string()),
+      insuranceGroupNumber: v.optional(v.string()),
+      insurancePhone: v.optional(v.string()),
+      policyHolderName: v.optional(v.string()),
+      policyHolderRelationship: v.optional(v.string()),
+      // Primary Care
+      primaryPhysicianName: v.optional(v.string()),
+      primaryPhysicianPhone: v.optional(v.string()),
+      // Notes
+      notes: v.optional(v.string()),
       profileCompletedAt: v.optional(v.number()),
       inviteSentAt: v.optional(v.number()),
       // Availability status fields
@@ -175,19 +207,46 @@ export const getById = query({
       orgId: athlete.orgId,
       teamId: athlete.teamId,
       teamName: team?.name || "Unknown Team",
+      // Basic Info
       firstName: athlete.firstName,
       lastName: athlete.lastName,
+      preferredName: athlete.preferredName,
       email: athlete.email,
+      phone: athlete.phone,
       dateOfBirth: athlete.dateOfBirth,
       sex: athlete.sex,
+      // Athletic Info
       classYear: athlete.classYear,
       jerseyNumber: athlete.jerseyNumber,
       position: athlete.position,
       heightInches: athlete.heightInches,
       weightLbs: athlete.weightLbs,
-      notes: athlete.notes,
+      dominantHand: athlete.dominantHand,
+      // Emergency Contacts
       emergencyContactName: athlete.emergencyContactName,
       emergencyContactPhone: athlete.emergencyContactPhone,
+      emergencyContactRelationship: athlete.emergencyContactRelationship,
+      emergencyContact2Name: athlete.emergencyContact2Name,
+      emergencyContact2Phone: athlete.emergencyContact2Phone,
+      emergencyContact2Relationship: athlete.emergencyContact2Relationship,
+      // Medical History
+      allergies: athlete.allergies,
+      medications: athlete.medications,
+      medicalConditions: athlete.medicalConditions,
+      previousSurgeries: athlete.previousSurgeries,
+      previousInjuries: athlete.previousInjuries,
+      // Insurance
+      insuranceProvider: athlete.insuranceProvider,
+      insurancePolicyNumber: athlete.insurancePolicyNumber,
+      insuranceGroupNumber: athlete.insuranceGroupNumber,
+      insurancePhone: athlete.insurancePhone,
+      policyHolderName: athlete.policyHolderName,
+      policyHolderRelationship: athlete.policyHolderRelationship,
+      // Primary Care
+      primaryPhysicianName: athlete.primaryPhysicianName,
+      primaryPhysicianPhone: athlete.primaryPhysicianPhone,
+      // Notes
+      notes: athlete.notes,
       profileCompletedAt: athlete.profileCompletedAt,
       inviteSentAt: athlete.inviteSentAt,
       // Availability status
