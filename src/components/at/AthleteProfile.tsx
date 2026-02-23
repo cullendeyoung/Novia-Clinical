@@ -256,142 +256,131 @@ export default function AthleteProfile() {
                 </div>
               ) : (
                 activeInjuries.map((injury) => (
-                  <div key={injury._id}>
-                    <button
-                      onClick={() => setSelectedInjuryId(selectedInjuryId === injury._id ? null : injury._id)}
-                      className={`w-full p-4 text-left hover:bg-slate-50 transition-colors ${
-                        selectedInjuryId === injury._id ? "bg-amber-50" : ""
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className={`font-medium ${
-                            selectedInjuryId === injury._id ? "text-amber-900" : "text-slate-900"
-                          }`}>
-                            {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
-                          </p>
-                          {injury.diagnosis && (
-                            <p className="text-sm text-slate-600 mt-0.5">{injury.diagnosis}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Injured: {injury.injuryDate} • {injury.encounterCount} encounters
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                              injury.rtpStatus === "out"
-                                ? "bg-red-100 text-red-700"
-                                : injury.rtpStatus === "limited"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-green-100 text-green-700"
-                            }`}
-                          >
-                            {injury.rtpStatus === "out" ? "Out" : injury.rtpStatus === "limited" ? "Limited" : "Full"}
-                          </span>
-                          {selectedInjuryId === injury._id ? (
-                            <ChevronDown className="h-4 w-4 text-amber-500" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-slate-400" />
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                    {/* Injury Details - shown when injury is selected */}
-                    {selectedInjuryId === injury._id && (
-                      <div className="bg-amber-50 border-t border-amber-200 px-4 py-3 space-y-4">
-                        {/* Change Status Section */}
-                        <div>
-                          <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-2">
-                            Change Status
-                          </p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={async () => {
-                                setUpdatingInjuryStatus(injury._id);
-                                try {
-                                  await updateInjury({ injuryId: injury._id as Id<"injuries">, rtpStatus: "out" });
-                                  toast.success("Status updated to Out");
-                                } catch {
-                                  toast.error("Failed to update status");
-                                } finally {
-                                  setUpdatingInjuryStatus(null);
-                                }
-                              }}
-                              disabled={updatingInjuryStatus === injury._id || injury.rtpStatus === "out"}
-                              className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                                injury.rtpStatus === "out"
-                                  ? "bg-red-600 text-white"
-                                  : "bg-white text-red-600 border border-red-200 hover:bg-red-50"
-                              } disabled:opacity-50`}
-                            >
-                              Out
-                            </button>
-                            <button
-                              onClick={async () => {
-                                setUpdatingInjuryStatus(injury._id);
-                                try {
-                                  await updateInjury({ injuryId: injury._id as Id<"injuries">, rtpStatus: "limited" });
-                                  toast.success("Status updated to Limited");
-                                } catch {
-                                  toast.error("Failed to update status");
-                                } finally {
-                                  setUpdatingInjuryStatus(null);
-                                }
-                              }}
-                              disabled={updatingInjuryStatus === injury._id || injury.rtpStatus === "limited"}
-                              className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                                injury.rtpStatus === "limited"
-                                  ? "bg-amber-500 text-white"
-                                  : "bg-white text-amber-600 border border-amber-200 hover:bg-amber-50"
-                              } disabled:opacity-50`}
-                            >
-                              Limited
-                            </button>
-                            <button
-                              onClick={async () => {
-                                setUpdatingInjuryStatus(injury._id);
-                                try {
-                                  await updateInjury({ injuryId: injury._id as Id<"injuries">, rtpStatus: "full" });
-                                  toast.success("Status updated to Full");
-                                } catch {
-                                  toast.error("Failed to update status");
-                                } finally {
-                                  setUpdatingInjuryStatus(null);
-                                }
-                              }}
-                              disabled={updatingInjuryStatus === injury._id || injury.rtpStatus === "full"}
-                              className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                                injury.rtpStatus === "full"
-                                  ? "bg-green-600 text-white"
-                                  : "bg-white text-green-600 border border-green-200 hover:bg-green-50"
-                              } disabled:opacity-50`}
-                            >
-                              Full
-                            </button>
-                          </div>
-                          {/* Clear/Resolve Injury Button */}
-                          <button
-                            onClick={async () => {
-                              setUpdatingInjuryStatus(injury._id);
-                              try {
-                                await resolveInjury({ injuryId: injury._id as Id<"injuries"> });
-                                toast.success("Injury marked as resolved");
-                                setSelectedInjuryId(null);
-                              } catch {
-                                toast.error("Failed to resolve injury");
-                              } finally {
-                                setUpdatingInjuryStatus(null);
-                              }
-                            }}
-                            disabled={updatingInjuryStatus === injury._id}
-                            className="w-full mt-2 px-3 py-2 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
-                          >
-                            {updatingInjuryStatus === injury._id ? "Updating..." : "Mark as Cleared / Resolved"}
-                          </button>
-                        </div>
+                  <div key={injury._id} className={`p-4 ${selectedInjuryId === injury._id ? "bg-amber-50" : ""}`}>
+                    {/* Injury Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <button
+                        onClick={() => setSelectedInjuryId(selectedInjuryId === injury._id ? null : injury._id)}
+                        className="text-left flex-1"
+                      >
+                        <p className={`font-medium ${
+                          selectedInjuryId === injury._id ? "text-amber-900" : "text-slate-900"
+                        }`}>
+                          {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
+                        </p>
+                        {injury.diagnosis && (
+                          <p className="text-sm text-slate-600 mt-0.5">{injury.diagnosis}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Injured: {injury.injuryDate} • {injury.encounterCount} encounters
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => setSelectedInjuryId(selectedInjuryId === injury._id ? null : injury._id)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-slate-700"
+                      >
+                        {selectedInjuryId === injury._id ? (
+                          <>Docs <ChevronDown className="h-3 w-3" /></>
+                        ) : (
+                          <>Docs <ChevronRight className="h-3 w-3" /></>
+                        )}
+                      </button>
+                    </div>
 
-                        {/* Documentation Section */}
+                    {/* Status Toggle Buttons - Always visible */}
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (injury.rtpStatus === "out") return;
+                          setUpdatingInjuryStatus(injury._id);
+                          try {
+                            await updateInjury({ injuryId: injury._id as Id<"injuries">, rtpStatus: "out" });
+                            toast.success("Status updated to Out");
+                          } catch {
+                            toast.error("Failed to update status");
+                          } finally {
+                            setUpdatingInjuryStatus(null);
+                          }
+                        }}
+                        disabled={updatingInjuryStatus === injury._id}
+                        className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+                          injury.rtpStatus === "out"
+                            ? "bg-red-600 text-white"
+                            : "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+                        } disabled:opacity-50`}
+                      >
+                        Out
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (injury.rtpStatus === "limited") return;
+                          setUpdatingInjuryStatus(injury._id);
+                          try {
+                            await updateInjury({ injuryId: injury._id as Id<"injuries">, rtpStatus: "limited" });
+                            toast.success("Status updated to Limited");
+                          } catch {
+                            toast.error("Failed to update status");
+                          } finally {
+                            setUpdatingInjuryStatus(null);
+                          }
+                        }}
+                        disabled={updatingInjuryStatus === injury._id}
+                        className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+                          injury.rtpStatus === "limited"
+                            ? "bg-amber-500 text-white"
+                            : "bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100"
+                        } disabled:opacity-50`}
+                      >
+                        Limited
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (injury.rtpStatus === "full") return;
+                          setUpdatingInjuryStatus(injury._id);
+                          try {
+                            await updateInjury({ injuryId: injury._id as Id<"injuries">, rtpStatus: "full" });
+                            toast.success("Status updated to Full");
+                          } catch {
+                            toast.error("Failed to update status");
+                          } finally {
+                            setUpdatingInjuryStatus(null);
+                          }
+                        }}
+                        disabled={updatingInjuryStatus === injury._id}
+                        className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+                          injury.rtpStatus === "full"
+                            ? "bg-green-600 text-white"
+                            : "bg-green-50 text-green-600 border border-green-200 hover:bg-green-100"
+                        } disabled:opacity-50`}
+                      >
+                        Full
+                      </button>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          setUpdatingInjuryStatus(injury._id);
+                          try {
+                            await resolveInjury({ injuryId: injury._id as Id<"injuries"> });
+                            toast.success("Injury cleared");
+                            setSelectedInjuryId(null);
+                          } catch {
+                            toast.error("Failed to clear injury");
+                          } finally {
+                            setUpdatingInjuryStatus(null);
+                          }
+                        }}
+                        disabled={updatingInjuryStatus === injury._id}
+                        className="px-2 py-1.5 rounded text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    {/* Injury Documentation - shown when injury is selected */}
+                    {selectedInjuryId === injury._id && (
+                      <div className="mt-3 pt-3 border-t border-amber-200">
                         <div>
                           <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-2">
                             Documentation for this injury
