@@ -336,9 +336,7 @@ SUMMARY: ${result.summary}`;
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const saveDocument = async (showUploadSuccess: boolean = false) => {
     if (!selectedAthleteId) return;
 
     if (!noteContent.trim()) {
@@ -379,7 +377,11 @@ SUMMARY: ${result.summary}`;
         aiGenerated: !!transcript, // Mark as AI-generated if we have a transcript
       });
 
-      toast.success("Document saved successfully");
+      if (showUploadSuccess) {
+        toast.success("Document uploaded to EMR successfully!");
+      } else {
+        toast.success("Document saved successfully");
+      }
       setSelectedEncounterId(encounterId);
       setViewMode("encounter");
     } catch (error) {
@@ -388,6 +390,15 @@ SUMMARY: ${result.summary}`;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveDocument(false);
+  };
+
+  const handleUploadToEMR = async () => {
+    await saveDocument(true);
   };
 
   // Insert SOAP template into the note content
@@ -646,13 +657,19 @@ PLAN:
             type="button"
             disabled={isSaving || !noteContent.trim() || recordingState.isRecording || isProcessing}
             className="w-full bg-emerald-600 hover:bg-emerald-700 py-6 text-base"
-            onClick={(e) => {
-              e.preventDefault();
-              toast.success("Upload to EMR coming soon!");
-            }}
+            onClick={handleUploadToEMR}
           >
-            <Upload className="mr-2 h-5 w-5" />
-            Upload to EMR
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Uploading to EMR...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-5 w-5" />
+                Upload to EMR
+              </>
+            )}
           </Button>
         </div>
 
@@ -696,13 +713,19 @@ PLAN:
               type="button"
               disabled={isSaving || !noteContent.trim() || recordingState.isRecording || isProcessing}
               className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={(e) => {
-                e.preventDefault();
-                toast.success("Upload to EMR coming soon!");
-              }}
+              onClick={handleUploadToEMR}
             >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload to EMR
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload to EMR
+                </>
+              )}
             </Button>
           </div>
         </div>

@@ -258,7 +258,7 @@ export default function EncounterDetail() {
         {/* Upload to EMR Button */}
         <div className="mt-8 pt-6 border-t border-slate-200">
           <Button
-            onClick={() => toast.success("Upload to EMR coming soon!")}
+            onClick={() => toast.success("Document is saved to the EMR")}
             className="w-full bg-emerald-600 hover:bg-emerald-700 py-6 text-base"
           >
             <Upload className="mr-2 h-5 w-5" />

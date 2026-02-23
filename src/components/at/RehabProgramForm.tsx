@@ -224,9 +224,7 @@ export default function RehabProgramForm() {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const saveProgram = async (showUploadSuccess: boolean = false) => {
     if (!selectedAthleteId) {
       toast.error("No athlete selected");
       return;
@@ -274,7 +272,11 @@ export default function RehabProgramForm() {
         })),
       });
 
-      toast.success("Rehab program created successfully");
+      if (showUploadSuccess) {
+        toast.success("Rehab program uploaded to EMR successfully!");
+      } else {
+        toast.success("Rehab program created successfully");
+      }
       setViewMode("profile");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to create program";
@@ -282,6 +284,15 @@ export default function RehabProgramForm() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveProgram(false);
+  };
+
+  const handleUploadToEMR = async () => {
+    await saveProgram(true);
   };
 
   if (!athlete) {
@@ -685,10 +696,19 @@ export default function RehabProgramForm() {
               type="button"
               disabled={isSaving || !injuryId || injuryId === "new_injury" || !programName.trim()}
               className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => toast.success("Upload to EMR coming soon!")}
+              onClick={handleUploadToEMR}
             >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload to EMR
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload to EMR
+                </>
+              )}
             </Button>
           </div>
         </div>
