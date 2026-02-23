@@ -39,11 +39,22 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   }, [state.isPaused]);
 
   const startRecording = useCallback(async () => {
-    try {
-      // Reset state
-      chunksRef.current = [];
-      pausedDurationRef.current = 0;
+    // Reset state
+    chunksRef.current = [];
+    pausedDurationRef.current = 0;
 
+    // Check if getUserMedia is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const errorMessage = "Audio recording is not supported in this browser.";
+      setState((prev) => ({
+        ...prev,
+        isRecording: false,
+        error: errorMessage,
+      }));
+      throw new Error(errorMessage);
+    }
+
+    try {
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -102,13 +113,18 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       const errorMessage =
         error instanceof DOMException && error.name === "NotAllowedError"
           ? "Microphone access denied. Please allow microphone access to record."
-          : "Failed to start recording. Please check your microphone.";
+          : error instanceof DOMException && error.name === "NotFoundError"
+            ? "No microphone found. Please connect a microphone."
+            : "Failed to start recording. Please check your microphone.";
 
       setState((prev) => ({
         ...prev,
         isRecording: false,
         error: errorMessage,
       }));
+
+      // Re-throw so the caller can handle it
+      throw new Error(errorMessage);
     }
   }, [updateDuration]);
 

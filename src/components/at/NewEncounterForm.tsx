@@ -221,7 +221,9 @@ export default function NewEncounterForm() {
 
   const handleStartRecording = async () => {
     try {
+      toast("Requesting microphone access...", { icon: "🎤" });
       await startRecording();
+      toast.success("Recording started!");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to start recording";
       toast.error(message);
