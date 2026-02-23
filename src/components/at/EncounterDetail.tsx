@@ -255,8 +255,19 @@ export default function EncounterDetail() {
             )}
         </div>
 
-        {/* Footer Metadata */}
+        {/* Upload to EMR Button */}
         <div className="mt-8 pt-6 border-t border-slate-200">
+          <Button
+            onClick={() => toast.success("Upload to EMR coming soon!")}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 py-6 text-base"
+          >
+            <Upload className="mr-2 h-5 w-5" />
+            Upload to EMR
+          </Button>
+        </div>
+
+        {/* Footer Metadata */}
+        <div className="mt-6 pt-4 border-t border-slate-200">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div>
               Created: {new Date(encounter.createdAt).toLocaleString()}
