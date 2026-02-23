@@ -30,7 +30,7 @@ import EditAthleteForm from "./EditAthleteForm";
 type AvailabilityStatus = "healthy" | "limited" | "out";
 
 export default function AthleteProfile() {
-  const { selectedAthleteId, setViewMode, setSelectedEncounterId } = useATContext();
+  const { selectedAthleteId, setViewMode, setSelectedEncounterId, setSelectedInjuryId: setContextInjuryId } = useATContext();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [selectedInjuryId, setSelectedInjuryId] = useState<string | null>(null);
@@ -260,12 +260,13 @@ export default function AthleteProfile() {
                     {/* Injury Header */}
                     <div className="flex items-start justify-between mb-3">
                       <button
-                        onClick={() => setSelectedInjuryId(selectedInjuryId === injury._id ? null : injury._id)}
-                        className="text-left flex-1"
+                        onClick={() => {
+                          setContextInjuryId(injury._id as Id<"injuries">);
+                          setViewMode("injury-detail");
+                        }}
+                        className="text-left flex-1 hover:bg-slate-50 rounded-lg p-1 -m-1 transition-colors"
                       >
-                        <p className={`font-medium ${
-                          selectedInjuryId === injury._id ? "text-amber-900" : "text-slate-900"
-                        }`}>
+                        <p className="font-medium text-slate-900 hover:text-blue-600">
                           {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
                         </p>
                         {injury.diagnosis && (
@@ -510,8 +511,15 @@ export default function AthleteProfile() {
               </div>
               <div className="divide-y divide-slate-100">
                 {resolvedInjuries.slice(0, 5).map((injury) => (
-                  <div key={injury._id} className="p-4">
-                    <p className="font-medium text-slate-900">
+                  <button
+                    key={injury._id}
+                    onClick={() => {
+                      setContextInjuryId(injury._id as Id<"injuries">);
+                      setViewMode("injury-detail");
+                    }}
+                    className="w-full p-4 text-left hover:bg-slate-50 transition-colors"
+                  >
+                    <p className="font-medium text-slate-900 hover:text-blue-600">
                       {injury.bodyRegion} {injury.side !== "NA" && `(${injury.side})`}
                     </p>
                     {injury.diagnosis && (
@@ -520,7 +528,7 @@ export default function AthleteProfile() {
                     <p className="text-xs text-muted-foreground mt-1">
                       {injury.injuryDate} - {injury.resolvedDate || "Resolved"}
                     </p>
-                  </div>
+                  </button>
                 ))}
                 {resolvedInjuries.length > 5 && (
                   <div className="p-3 text-center">

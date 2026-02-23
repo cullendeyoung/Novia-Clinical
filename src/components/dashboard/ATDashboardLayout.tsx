@@ -36,6 +36,7 @@ export default function ATDashboardLayout() {
   const [selectedTeamIdState, setSelectedTeamIdState] = useState<Id<"teams"> | null | "uninitialized">("uninitialized");
   const [selectedAthleteId, setSelectedAthleteId] = useState<Id<"athletes"> | null>(null);
   const [selectedEncounterId, setSelectedEncounterId] = useState<Id<"encounters"> | null>(null);
+  const [selectedInjuryId, setSelectedInjuryId] = useState<Id<"injuries"> | null>(null);
   const [viewMode, setViewMode] = useState<ATViewMode>("dashboard");
   const [preSelectedEncounterType, setPreSelectedEncounterType] = useState<EncounterType | null>(null);
 
@@ -99,6 +100,8 @@ export default function ATDashboardLayout() {
         setSelectedEncounterId,
         viewMode,
         setViewMode,
+        selectedInjuryId,
+        setSelectedInjuryId,
         preSelectedEncounterType,
         setPreSelectedEncounterType,
       }}

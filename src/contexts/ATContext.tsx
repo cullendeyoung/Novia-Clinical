@@ -5,7 +5,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 export type ATPage = "my-dashboard" | "team-overview" | "emr";
 
 // View modes for the EMR main content area
-export type ATViewMode = "dashboard" | "encounter" | "profile" | "new-encounter" | "start-document" | "rehab-program";
+export type ATViewMode = "dashboard" | "encounter" | "profile" | "new-encounter" | "start-document" | "rehab-program" | "injury-detail";
 
 // Encounter types
 export type EncounterType = "daily_care" | "soap_followup" | "initial_eval" | "rtp_clearance" | "rehab_program" | "other";
@@ -27,6 +27,9 @@ export interface ATContextType {
   // View mode (EMR only)
   viewMode: ATViewMode;
   setViewMode: (mode: ATViewMode) => void;
+  // Injury selection (EMR injury detail view)
+  selectedInjuryId: Id<"injuries"> | null;
+  setSelectedInjuryId: (id: Id<"injuries"> | null) => void;
   // Pre-selected encounter type (from ATWelcome)
   preSelectedEncounterType: EncounterType | null;
   setPreSelectedEncounterType: (type: EncounterType | null) => void;
