@@ -4,6 +4,7 @@ import { api } from "../../../convex/_generated/api";
 import { useATContext } from "@/contexts/ATContext";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
   ArrowLeft,
@@ -92,7 +93,7 @@ Next steps: Continue current protocol, increase activity as tolerated`,
     },
   },
   initial_eval: {
-    label: "Initial Evaluation",
+    label: "Initial Eval / New Injury",
     description: "First assessment of a new injury or condition",
     defaultFormat: "soap",
     formatOptions: [
@@ -192,6 +193,7 @@ export default function NewEncounterForm() {
   const [encounterType, setEncounterType] = useState<EncounterType>("daily_care");
   const [noteFormat, setNoteFormat] = useState<NoteFormat>("summary");
   const [injuryId, setInjuryId] = useState<Id<"injuries"> | "">("");
+  const [newInjuryTitle, setNewInjuryTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -578,6 +580,26 @@ PLAN:
           </div>
         </div>
 
+        {/* New Injury Title - Only shown for Initial Eval */}
+        {encounterType === "initial_eval" && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <Label htmlFor="newInjuryTitle" className="text-amber-900 font-medium">
+              New Injury Title
+            </Label>
+            <Input
+              id="newInjuryTitle"
+              value={newInjuryTitle}
+              onChange={(e) => setNewInjuryTitle(e.target.value)}
+              placeholder="e.g., Right Knee ACL Sprain, Left Ankle Inversion"
+              disabled={recordingState.isRecording || isProcessing}
+              className="mt-2 bg-white"
+            />
+            <p className="text-xs text-amber-700 mt-1">
+              Enter a brief title for this new injury (e.g., body part + condition)
+            </p>
+          </div>
+        )}
+
         {/* Single Note Entry Box */}
         <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
           <div className="border-b border-slate-200 px-5 py-3 bg-slate-50 flex items-center justify-between">
@@ -616,6 +638,22 @@ PLAN:
               className="w-full min-h-[400px] rounded-md border border-slate-200 px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-y font-mono disabled:opacity-50 disabled:bg-slate-50"
             />
           </div>
+        </div>
+
+        {/* Upload to EMR Button - Prominent placement */}
+        <div className="mt-4">
+          <Button
+            type="button"
+            disabled={isSaving || !noteContent.trim() || recordingState.isRecording || isProcessing}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 py-6 text-base"
+            onClick={(e) => {
+              e.preventDefault();
+              toast.success("Upload to EMR coming soon!");
+            }}
+          >
+            <Upload className="mr-2 h-5 w-5" />
+            Upload to EMR
+          </Button>
         </div>
 
         {/* Hint */}
