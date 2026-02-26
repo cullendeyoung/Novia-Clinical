@@ -13,6 +13,7 @@ import {
   Activity,
   UserCheck,
   UserX,
+  User,
 } from "lucide-react";
 
 // Mock data until backend is connected
@@ -29,6 +30,18 @@ const MOCK_INJURY_STATS = {
   ],
 };
 
+// Mock clinicians in the practice
+const MOCK_CLINICIANS = [
+  { id: "1", name: "Dr. Martinez", type: "Physical Therapist" },
+  { id: "2", name: "Dr. Thompson", type: "Physical Therapist" },
+  { id: "3", name: "Dr. Kim", type: "Chiropractor" },
+  { id: "4", name: "Dr. Patel", type: "Physician" },
+];
+
+// Current logged-in clinician (mock)
+const CURRENT_CLINICIAN_ID = "1";
+const CURRENT_CLINICIAN_NAME = "Dr. Martinez";
+
 const MOCK_PATIENTS = [
   {
     id: "1",
@@ -38,6 +51,7 @@ const MOCK_PATIENTS = [
     activeCase: { diagnosis: "Lumbar Disc Herniation" },
     lastVisitDate: Date.now() - 2 * 24 * 60 * 60 * 1000,
     lastVisitType: "follow_up",
+    assignedClinicianId: "1",
     assignedClinicianName: "Dr. Martinez",
     nextAppointment: Date.now() + 3 * 24 * 60 * 60 * 1000,
   },
@@ -49,6 +63,7 @@ const MOCK_PATIENTS = [
     activeCase: { diagnosis: "Rotator Cuff Tear - R" },
     lastVisitDate: Date.now() - 1 * 24 * 60 * 60 * 1000,
     lastVisitType: "re_evaluation",
+    assignedClinicianId: "2",
     assignedClinicianName: "Dr. Thompson",
     nextAppointment: Date.now() + 5 * 24 * 60 * 60 * 1000,
   },
@@ -60,6 +75,7 @@ const MOCK_PATIENTS = [
     activeCase: { diagnosis: "ACL Reconstruction - L" },
     lastVisitDate: Date.now() - 3 * 24 * 60 * 60 * 1000,
     lastVisitType: "follow_up",
+    assignedClinicianId: "1",
     assignedClinicianName: "Dr. Martinez",
   },
   {
@@ -70,6 +86,7 @@ const MOCK_PATIENTS = [
     activeCase: { diagnosis: "Cervical Radiculopathy" },
     lastVisitDate: Date.now() - 7 * 24 * 60 * 60 * 1000,
     lastVisitType: "initial_evaluation",
+    assignedClinicianId: "3",
     assignedClinicianName: "Dr. Kim",
     nextAppointment: Date.now() + 1 * 24 * 60 * 60 * 1000,
   },
@@ -81,7 +98,32 @@ const MOCK_PATIENTS = [
     activeCase: { diagnosis: "Lateral Epicondylitis - R" },
     lastVisitDate: Date.now() - 4 * 24 * 60 * 60 * 1000,
     lastVisitType: "follow_up",
+    assignedClinicianId: "2",
     assignedClinicianName: "Dr. Thompson",
+  },
+  {
+    id: "6",
+    firstName: "Robert",
+    lastName: "Brown",
+    status: "active" as const,
+    activeCase: { diagnosis: "Plantar Fasciitis - L" },
+    lastVisitDate: Date.now() - 1 * 24 * 60 * 60 * 1000,
+    lastVisitType: "follow_up",
+    assignedClinicianId: "4",
+    assignedClinicianName: "Dr. Patel",
+    nextAppointment: Date.now() + 2 * 24 * 60 * 60 * 1000,
+  },
+  {
+    id: "7",
+    firstName: "Jennifer",
+    lastName: "Martinez",
+    status: "active" as const,
+    activeCase: { diagnosis: "Shoulder Impingement - R" },
+    lastVisitDate: Date.now() - 5 * 24 * 60 * 60 * 1000,
+    lastVisitType: "re_evaluation",
+    assignedClinicianId: "1",
+    assignedClinicianName: "Dr. Martinez",
+    nextAppointment: Date.now() + 4 * 24 * 60 * 60 * 1000,
   },
 ];
 
@@ -185,19 +227,33 @@ function PieChart({ data }: { data: typeof MOCK_INJURY_STATS.topInjuries }) {
   );
 }
 
+type ViewMode = "clinic" | "my_patients";
+
 export default function Patients() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("clinic");
+  const [selectedClinicianId, setSelectedClinicianId] = useState<string>("all");
 
-  // Filter patients by search
-  const filteredPatients = MOCK_PATIENTS.filter((p) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      p.firstName.toLowerCase().includes(query) ||
-      p.lastName.toLowerCase().includes(query) ||
-      p.activeCase?.diagnosis.toLowerCase().includes(query)
-    );
-  });
+  // Filter patients by view mode, clinician, and search
+  const filteredPatients = useMemo(() => {
+    return MOCK_PATIENTS.filter((p) => {
+      // First filter by view mode
+      if (viewMode === "my_patients") {
+        if (p.assignedClinicianId !== CURRENT_CLINICIAN_ID) return false;
+      } else if (selectedClinicianId !== "all") {
+        if (p.assignedClinicianId !== selectedClinicianId) return false;
+      }
+
+      // Then filter by search
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        p.firstName.toLowerCase().includes(query) ||
+        p.lastName.toLowerCase().includes(query) ||
+        p.activeCase?.diagnosis.toLowerCase().includes(query)
+      );
+    });
+  }, [viewMode, selectedClinicianId, searchQuery]);
 
   const stats = MOCK_INJURY_STATS;
 
@@ -210,13 +266,68 @@ export default function Patients() {
             Patients
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Clinic-wide patient overview and analytics
+            {viewMode === "clinic"
+              ? "Clinic-wide patient overview and analytics"
+              : `${CURRENT_CLINICIAN_NAME}'s patients`}
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Patient
-        </Button>
+
+        <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex bg-slate-100 rounded-lg p-1">
+            <button
+              onClick={() => {
+                setViewMode("clinic");
+                setSelectedClinicianId("all");
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                viewMode === "clinic"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              )}
+            >
+              <Users className="w-4 h-4" />
+              Clinic Patients
+            </button>
+            <button
+              onClick={() => {
+                setViewMode("my_patients");
+                setSelectedClinicianId("all");
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
+                viewMode === "my_patients"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              )}
+            >
+              <User className="w-4 h-4" />
+              My Patients
+            </button>
+          </div>
+
+          {/* Clinician Filter (only in clinic view) */}
+          {viewMode === "clinic" && (
+            <select
+              value={selectedClinicianId}
+              onChange={(e) => setSelectedClinicianId(e.target.value)}
+              className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Clinicians</option>
+              {MOCK_CLINICIANS.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Patient
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview Row */}
@@ -312,7 +423,13 @@ export default function Patients() {
         {/* Current Patients List */}
         <div className="col-span-2 bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900">Current Patients</h3>
+            <h3 className="font-semibold text-slate-900">
+              {viewMode === "my_patients"
+                ? "My Patients"
+                : selectedClinicianId !== "all"
+                  ? `${MOCK_CLINICIANS.find((c) => c.id === selectedClinicianId)?.name}'s Patients`
+                  : "All Clinic Patients"}
+            </h3>
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
