@@ -63,6 +63,24 @@ interface ParsedNote {
   confidence: number;
 }
 
+// Stored encounter structure
+interface StoredEncounter {
+  id: string;
+  patientId: string;
+  encounterType: string;
+  caseTitle: string;
+  date: string;
+  provider: string;
+  status: "Draft" | "Signed" | "Pending";
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string;
+  exercises: string[];
+  summary: string;
+  createdAt: number;
+}
+
 const NAV_ITEMS: { id: PTPage; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "patients", label: "Patients", icon: Users },
@@ -241,6 +259,13 @@ export default function PTDashboardLayout() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [parsedNote, setParsedNote] = useState<ParsedNote | null>(null);
 
+  // Stored encounters - in production this would come from database
+  const [storedEncounters, setStoredEncounters] = useState<StoredEncounter[]>([]);
+
+  // Success notification state
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
   // For now, we'll use a simple flag to simulate admin access
   // In production, this would come from the practiceUsers table
   const isAdmin = true; // Temporary - all users have admin access for dev
@@ -320,9 +345,35 @@ export default function PTDashboardLayout() {
   };
 
   const handlePropagate = () => {
-    // In production, this would save to the database
-    // For now, just show success and close
-    alert("Note propagated successfully! The encounter has been added to " + parsedNote?.patientMatch?.name + "'s record.");
+    if (!parsedNote || !parsedNote.patientMatch) return;
+
+    // Create new encounter from parsed note
+    const newEncounter: StoredEncounter = {
+      id: `enc-${Date.now()}`,
+      patientId: parsedNote.patientMatch.id,
+      encounterType: parsedNote.encounterType,
+      caseTitle: parsedNote.caseTitle,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      provider: session?.user?.name || "Dr. Smith",
+      status: "Signed",
+      subjective: parsedNote.subjective,
+      objective: parsedNote.objective,
+      assessment: parsedNote.assessment,
+      plan: parsedNote.plan,
+      exercises: parsedNote.exercises,
+      summary: parsedNote.summary,
+      createdAt: Date.now(),
+    };
+
+    // Add to stored encounters
+    setStoredEncounters(prev => [newEncounter, ...prev]);
+
+    // Show success notification
+    setSuccessMessage(`${parsedNote.encounterType} note added to ${parsedNote.patientMatch.name}'s record`);
+    setShowSuccessNotification(true);
+    setTimeout(() => setShowSuccessNotification(false), 4000);
+
+    // Close the modal
     handleCancelCapture();
   };
 
@@ -350,6 +401,7 @@ export default function PTDashboardLayout() {
             handleClearPatient={handleClearPatient}
             emrSection={emrSection}
             setEmrSection={setEmrSection}
+            storedEncounters={storedEncounters}
           />
         );
       case "documents":
@@ -481,6 +533,27 @@ export default function PTDashboardLayout() {
           onCancel={handleCancelCapture}
           onPropagate={handlePropagate}
         />
+      )}
+
+      {/* Success Notification */}
+      {showSuccessNotification && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="flex items-center gap-3 bg-emerald-600 text-white px-4 py-3 rounded-lg shadow-lg">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+              <Check className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-medium">Note Propagated Successfully</p>
+              <p className="text-sm text-emerald-100">{successMessage}</p>
+            </div>
+            <button
+              onClick={() => setShowSuccessNotification(false)}
+              className="ml-4 text-emerald-200 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1295,6 +1368,7 @@ interface EMRViewProps {
   handleClearPatient: () => void;
   emrSection: EMRSection;
   setEmrSection: (section: EMRSection) => void;
+  storedEncounters: StoredEncounter[];
 }
 
 function EMRView({
@@ -1306,6 +1380,7 @@ function EMRView({
   handleClearPatient,
   emrSection,
   setEmrSection,
+  storedEncounters,
 }: EMRViewProps) {
   return (
     <>
@@ -1450,7 +1525,7 @@ function EMRView({
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto bg-slate-50">
         {selectedPatient ? (
-          <EMRContent patient={selectedPatient} section={emrSection} />
+          <EMRContent patient={selectedPatient} section={emrSection} storedEncounters={storedEncounters} />
         ) : (
           <div className="flex flex-col items-center justify-center h-full">
             <div className="text-center max-w-md">
@@ -1472,7 +1547,19 @@ function EMRView({
 }
 
 // EMR Content based on selected section
-function EMRContent({ patient, section }: { patient: typeof MOCK_PATIENTS[0]; section: EMRSection }) {
+function EMRContent({ patient, section, storedEncounters }: { patient: typeof MOCK_PATIENTS[0]; section: EMRSection; storedEncounters: StoredEncounter[] }) {
+  const [selectedEncounter, setSelectedEncounter] = useState<StoredEncounter | null>(null);
+
+  // Get encounters for this patient
+  const patientEncounters = storedEncounters.filter(enc => enc.patientId === patient.id);
+
+  // Default encounters (mock data)
+  const defaultEncounters = [
+    { id: "default-1", type: "Follow-up", date: "Jan 10, 2024", provider: "Dr. Smith", status: "Signed" as const },
+    { id: "default-2", type: "Follow-up", date: "Jan 3, 2024", provider: "Dr. Smith", status: "Signed" as const },
+    { id: "default-3", type: "Initial Evaluation", date: "Dec 15, 2023", provider: "Dr. Smith", status: "Signed" as const },
+  ];
+
   return (
     <div className="p-6">
       {/* Patient Header Card */}
@@ -1546,7 +1633,7 @@ function EMRContent({ patient, section }: { patient: typeof MOCK_PATIENTS[0]; se
                   <span className="font-medium text-slate-900">{patient.activeCase || "Low Back Pain"}</span>
                   <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Active</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Started: Dec 15, 2023 • 6 visits</p>
+                <p className="text-xs text-muted-foreground">Started: Dec 15, 2023 • {patientEncounters.length + 6} visits</p>
               </div>
             </div>
             <Button variant="ghost" size="sm" className="w-full mt-3 text-muted-foreground">
@@ -1554,6 +1641,36 @@ function EMRContent({ patient, section }: { patient: typeof MOCK_PATIENTS[0]; se
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
+
+          {/* Recent Encounters on Overview */}
+          {patientEncounters.length > 0 && (
+            <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-slate-900">Recent Encounters</h3>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                  {patientEncounters.length} new from AI capture
+                </span>
+              </div>
+              <div className="space-y-2">
+                {patientEncounters.slice(0, 3).map((enc) => (
+                  <div
+                    key={enc.id}
+                    onClick={() => setSelectedEncounter(enc)}
+                    className="p-3 rounded-lg border border-blue-100 bg-blue-50/50 hover:border-blue-200 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-slate-900">{enc.encounterType}</span>
+                      </div>
+                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{enc.status}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{enc.date} • {enc.provider} • {enc.caseTitle}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1570,7 +1687,7 @@ function EMRContent({ patient, section }: { patient: typeof MOCK_PATIENTS[0]; se
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <span>Started: Dec 15, 2023</span>
                 <span>•</span>
-                <span>6 visits</span>
+                <span>{patientEncounters.length + 6} visits</span>
                 <span>•</span>
                 <span>Auth: 12 visits remaining</span>
               </div>
@@ -1579,7 +1696,7 @@ function EMRContent({ patient, section }: { patient: typeof MOCK_PATIENTS[0]; se
         </div>
       )}
 
-      {section === "encounters" && (
+      {section === "encounters" && !selectedEncounter && (
         <div className="rounded-xl border border-slate-200 bg-white p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-900">Encounters</h3>
@@ -1589,12 +1706,34 @@ function EMRContent({ patient, section }: { patient: typeof MOCK_PATIENTS[0]; se
             </Button>
           </div>
           <div className="space-y-3">
-            {[
-              { type: "Follow-up", date: "Jan 10, 2024", provider: "Dr. Smith", status: "Signed" },
-              { type: "Follow-up", date: "Jan 3, 2024", provider: "Dr. Smith", status: "Signed" },
-              { type: "Initial Evaluation", date: "Dec 15, 2023", provider: "Dr. Smith", status: "Signed" },
-            ].map((enc, i) => (
-              <div key={i} className="p-3 rounded-lg border border-slate-100 hover:border-slate-200 cursor-pointer transition-colors">
+            {/* AI-generated encounters first */}
+            {patientEncounters.map((enc) => (
+              <div
+                key={enc.id}
+                onClick={() => setSelectedEncounter(enc)}
+                className="p-4 rounded-lg border border-blue-100 bg-blue-50/30 hover:border-blue-200 cursor-pointer transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium text-slate-900">{enc.encounterType}</span>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">AI Generated</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{enc.date} • {enc.provider} • {enc.caseTitle}</p>
+                    <p className="text-sm text-slate-600 mt-2 line-clamp-1">{enc.summary}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{enc.status}</span>
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Default encounters */}
+            {defaultEncounters.map((enc) => (
+              <div key={enc.id} className="p-3 rounded-lg border border-slate-100 hover:border-slate-200 cursor-pointer transition-colors">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-medium text-slate-900">{enc.type}</span>
@@ -1604,6 +1743,93 @@ function EMRContent({ patient, section }: { patient: typeof MOCK_PATIENTS[0]; se
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Encounter Detail View */}
+      {section === "encounters" && selectedEncounter && (
+        <div className="space-y-6">
+          {/* Back button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedEncounter(null)}
+            className="text-muted-foreground"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back to Encounters
+          </Button>
+
+          {/* Encounter Header */}
+          <div className="rounded-xl border border-slate-200 bg-white p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                  <Sparkles className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">{selectedEncounter.encounterType}</h2>
+                  <p className="text-sm text-muted-foreground">{selectedEncounter.date} • {selectedEncounter.provider}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">AI Generated</span>
+                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{selectedEncounter.status}</span>
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <strong>Case:</strong> {selectedEncounter.caseTitle}
+            </div>
+          </div>
+
+          {/* SOAP Note */}
+          <div className="rounded-xl border border-slate-200 bg-white p-6">
+            <h3 className="font-semibold text-slate-900 mb-4">SOAP Note</h3>
+            <div className="space-y-4">
+              <div className="border-l-4 border-l-blue-500 bg-blue-50/50 rounded-r-lg p-4">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Subjective</label>
+                <p className="text-sm text-slate-700">{selectedEncounter.subjective}</p>
+              </div>
+              <div className="border-l-4 border-l-emerald-500 bg-emerald-50/50 rounded-r-lg p-4">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Objective</label>
+                <p className="text-sm text-slate-700">{selectedEncounter.objective}</p>
+              </div>
+              <div className="border-l-4 border-l-amber-500 bg-amber-50/50 rounded-r-lg p-4">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Assessment</label>
+                <p className="text-sm text-slate-700">{selectedEncounter.assessment}</p>
+              </div>
+              <div className="border-l-4 border-l-purple-500 bg-purple-50/50 rounded-r-lg p-4">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 block">Plan</label>
+                <p className="text-sm text-slate-700">{selectedEncounter.plan}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Exercises */}
+          {selectedEncounter.exercises.length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+              <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <Dumbbell className="h-4 w-4" />
+                Exercises Prescribed
+              </h3>
+              <div className="space-y-2">
+                {selectedEncounter.exercises.map((exercise, i) => (
+                  <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-slate-50">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-700">
+                      {i + 1}
+                    </span>
+                    <span className="text-sm text-slate-700">{exercise}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Summary */}
+          <div className="rounded-xl border border-slate-200 bg-white p-6">
+            <h3 className="font-semibold text-slate-900 mb-4">Visit Summary</h3>
+            <p className="text-sm text-slate-700">{selectedEncounter.summary}</p>
           </div>
         </div>
       )}
