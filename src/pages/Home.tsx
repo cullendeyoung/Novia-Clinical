@@ -163,6 +163,17 @@ export default function Home() {
                   <Link to="/login">Login</Link>
                 </Button>
               </div>
+              <p className="text-xs text-emerald-600 font-medium mt-4 mb-3">
+                CLINIC EMR - Physical Therapy
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/pt">PT Portal (Admin/Clinician)</Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/clinic-patient">Clinic Patient Portal</Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>

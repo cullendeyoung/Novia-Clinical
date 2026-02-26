@@ -489,6 +489,310 @@ export default defineSchema({
     .index("by_isSystemTemplate", ["isSystemTemplate"]),
 
   // =============================================================================
+  // CLINIC/PRACTICE TABLES (For PT, Physicians, NPs, Chiropractors, etc.)
+  // Separate from athletic training - for independent clinical practices
+  // =============================================================================
+
+  // Clinic role types
+  // practice_admin - Full admin access (billing, clinician management, settings)
+  // clinician - Can create/manage patients and encounters
+  // staff - Limited access (scheduling, basic patient info)
+
+  // Clinician specialty types for the platform
+  // physical_therapist, physician, nurse_practitioner, chiropractor, psychologist, etc.
+
+  // Practice/Clinic - The main tenant for clinical practices
+  clinicPractices: defineTable({
+    name: v.string(), // "ABC Physical Therapy", "Smith Chiropractic"
+    address: v.optional(v.string()),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    zip: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    website: v.optional(v.string()),
+    timezone: v.string(),
+    ownerAuthUserId: v.string(), // Better Auth user ID of practice owner/admin
+    practiceType: v.string(), // "physical_therapy", "chiropractic", "multi_specialty"
+    npiNumber: v.optional(v.string()), // National Provider Identifier
+    taxId: v.optional(v.string()),
+    settingsJson: v.optional(v.string()), // JSON config options
+    status: v.union(
+      v.literal("pending_payment"),
+      v.literal("trial"),
+      v.literal("active"),
+      v.literal("past_due"),
+      v.literal("canceled")
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_ownerAuthUserId", ["ownerAuthUserId"])
+    .index("by_status", ["status"])
+    .index("by_practiceType", ["practiceType"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Practice Users - Clinicians, admin, staff working at the practice
+  practiceUsers: defineTable({
+    practiceId: v.id("clinicPractices"),
+    authUserId: v.string(), // Links to Better Auth user
+    email: v.string(),
+    fullName: v.string(),
+    role: v.union(
+      v.literal("practice_admin"),
+      v.literal("clinician"),
+      v.literal("staff")
+    ),
+    clinicianType: v.optional(v.string()), // "physical_therapist", "chiropractor", "physician", etc.
+    licenseNumber: v.optional(v.string()),
+    licenseState: v.optional(v.string()),
+    npiNumber: v.optional(v.string()),
+    specialty: v.optional(v.string()), // "Orthopedic", "Sports", "Geriatric", etc.
+    isActive: v.boolean(),
+    lastLoginAt: v.optional(v.number()),
+    activeSessionId: v.optional(v.string()),
+    activeSessionStartedAt: v.optional(v.number()),
+    lastActiveAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_authUserId", ["authUserId"])
+    .index("by_email", ["email"])
+    .index("by_practiceId_and_role", ["practiceId", "role"])
+    .index("by_activeSessionId", ["activeSessionId"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Practice Patients - Patient records for the practice
+  practicePatients: defineTable({
+    practiceId: v.id("clinicPractices"),
+    authUserId: v.optional(v.string()), // If patient has an account/portal access
+    externalEhrId: v.optional(v.string()), // For EHR integration
+
+    // Basic Info
+    firstName: v.string(),
+    lastName: v.string(),
+    preferredName: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    dateOfBirth: v.optional(v.string()),
+    sex: v.optional(v.union(v.literal("M"), v.literal("F"), v.literal("Other"))),
+
+    // Address
+    addressStreet: v.optional(v.string()),
+    addressCity: v.optional(v.string()),
+    addressState: v.optional(v.string()),
+    addressZip: v.optional(v.string()),
+
+    // Emergency Contact
+    emergencyContactName: v.optional(v.string()),
+    emergencyContactPhone: v.optional(v.string()),
+    emergencyContactRelationship: v.optional(v.string()),
+
+    // Medical Info
+    allergies: v.optional(v.string()),
+    medications: v.optional(v.string()),
+    medicalConditions: v.optional(v.string()),
+    previousSurgeries: v.optional(v.string()),
+
+    // Insurance
+    insuranceProvider: v.optional(v.string()),
+    insurancePolicyNumber: v.optional(v.string()),
+    insuranceGroupNumber: v.optional(v.string()),
+    insurancePhone: v.optional(v.string()),
+    policyHolderName: v.optional(v.string()),
+    policyHolderRelationship: v.optional(v.string()),
+    secondaryInsuranceProvider: v.optional(v.string()),
+    secondaryInsurancePolicyNumber: v.optional(v.string()),
+
+    // Primary Care
+    primaryPhysicianName: v.optional(v.string()),
+    primaryPhysicianPhone: v.optional(v.string()),
+    referringPhysicianName: v.optional(v.string()),
+    referringPhysicianPhone: v.optional(v.string()),
+
+    // Status
+    status: v.union(
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("discharged")
+    ),
+    notes: v.optional(v.string()),
+
+    // Tracking
+    assignedClinicianId: v.optional(v.id("practiceUsers")), // Primary clinician
+    createdByUserId: v.id("practiceUsers"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_authUserId", ["authUserId"])
+    .index("by_assignedClinicianId", ["assignedClinicianId"])
+    .index("by_lastName_firstName", ["lastName", "firstName"])
+    .index("by_practiceId_and_status", ["practiceId", "status"])
+    .index("by_externalEhrId", ["externalEhrId"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Practice Encounters - Clinical visits/notes
+  practiceEncounters: defineTable({
+    practiceId: v.id("clinicPractices"),
+    patientId: v.id("practicePatients"),
+    clinicianId: v.id("practiceUsers"), // Treating clinician
+    caseId: v.optional(v.id("practiceCases")), // Links to a case/episode of care
+
+    encounterType: v.union(
+      v.literal("initial_evaluation"),
+      v.literal("follow_up"),
+      v.literal("re_evaluation"),
+      v.literal("discharge"),
+      v.literal("progress_note"),
+      v.literal("daily_note"),
+      v.literal("soap_note"),
+      v.literal("other")
+    ),
+    encounterDatetime: v.number(),
+
+    // SOAP fields
+    subjectiveText: v.optional(v.string()),
+    objectiveText: v.optional(v.string()),
+    assessmentText: v.optional(v.string()),
+    planText: v.optional(v.string()),
+
+    // PT-specific fields
+    chiefComplaint: v.optional(v.string()),
+    diagnosis: v.optional(v.string()),
+    icdCodes: v.optional(v.string()), // JSON array of ICD-10 codes
+    cptCodes: v.optional(v.string()), // JSON array of CPT codes
+    treatmentProvided: v.optional(v.string()),
+    patientGoals: v.optional(v.string()),
+    functionalStatus: v.optional(v.string()),
+
+    // Transcription/AI
+    transcriptText: v.optional(v.string()),
+    aiGenerated: v.boolean(),
+
+    // Sign-off
+    signedOffAt: v.optional(v.number()),
+    coSignedByUserId: v.optional(v.id("practiceUsers")),
+    coSignedAt: v.optional(v.number()),
+
+    // Duration
+    durationMinutes: v.optional(v.number()),
+    billedUnits: v.optional(v.number()),
+
+    // Archive
+    isArchived: v.optional(v.boolean()),
+    archivedAt: v.optional(v.number()),
+    archivedByUserId: v.optional(v.id("practiceUsers")),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_patientId", ["patientId"])
+    .index("by_clinicianId", ["clinicianId"])
+    .index("by_caseId", ["caseId"])
+    .index("by_practiceId_and_encounterDatetime", ["practiceId", "encounterDatetime"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Practice Cases - Episodes of care / treatment cases
+  practiceCases: defineTable({
+    practiceId: v.id("clinicPractices"),
+    patientId: v.id("practicePatients"),
+    clinicianId: v.id("practiceUsers"), // Primary treating clinician
+
+    caseName: v.optional(v.string()), // "Low Back Pain", "Post-op ACL Rehab"
+    diagnosis: v.optional(v.string()),
+    icdCodes: v.optional(v.string()), // JSON array
+    onsetDate: v.optional(v.string()),
+    referralDate: v.optional(v.string()),
+    referralSource: v.optional(v.string()), // "Dr. Smith", "Self-referred"
+
+    status: v.union(
+      v.literal("active"),
+      v.literal("on_hold"),
+      v.literal("discharged"),
+      v.literal("closed")
+    ),
+
+    // Goals and outcomes
+    shortTermGoals: v.optional(v.string()),
+    longTermGoals: v.optional(v.string()),
+    dischargeNotes: v.optional(v.string()),
+    dischargeDate: v.optional(v.string()),
+
+    // Authorization
+    authorizedVisits: v.optional(v.number()),
+    visitsUsed: v.optional(v.number()),
+    authorizationNumber: v.optional(v.string()),
+    authorizationExpires: v.optional(v.string()),
+
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_patientId", ["patientId"])
+    .index("by_clinicianId", ["clinicianId"])
+    .index("by_status", ["status"])
+    .index("by_practiceId_and_status", ["practiceId", "status"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Practice Subscriptions - Billing for practices
+  practiceSubscriptions: defineTable({
+    practiceId: v.id("clinicPractices"),
+    stripeCustomerId: v.string(),
+    stripeSubscriptionId: v.string(),
+    plan: v.string(), // "solo", "small_practice", "multi_clinician", "enterprise"
+    maxClinicians: v.number(),
+    maxPatients: v.optional(v.number()),
+    status: v.union(
+      v.literal("pending_payment"),
+      v.literal("trial"),
+      v.literal("active"),
+      v.literal("past_due"),
+      v.literal("canceled")
+    ),
+    trialEndsAt: v.optional(v.number()),
+    billingCycleStart: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_stripeCustomerId", ["stripeCustomerId"])
+    .index("by_stripeSubscriptionId", ["stripeSubscriptionId"])
+    .index("by_status", ["status"]),
+
+  // Practice Audit Logs
+  practiceAuditLogs: defineTable({
+    practiceId: v.id("clinicPractices"),
+    userId: v.optional(v.id("practiceUsers")),
+    authUserId: v.optional(v.string()),
+    action: v.string(),
+    entityType: v.string(),
+    entityId: v.optional(v.string()),
+    metadataJson: v.optional(v.string()),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_userId", ["userId"])
+    .index("by_action", ["action"])
+    .index("by_createdAt", ["createdAt"])
+    .index("by_practiceId_and_createdAt", ["practiceId", "createdAt"]),
+
+  // =============================================================================
   // LEGACY TABLES (Kept for backward compatibility - will be deprecated)
   // =============================================================================
 

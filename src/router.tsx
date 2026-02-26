@@ -14,6 +14,8 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 import OrganizationDashboardLayout from "./components/dashboard/OrganizationDashboardLayout";
 import ATDashboardLayout from "./components/dashboard/ATDashboardLayout";
 import AthleteDashboardLayout from "./components/dashboard/AthleteDashboardLayout";
+import PTDashboardLayout from "./components/dashboard/PTDashboardLayout";
+import ClinicPatientDashboardLayout from "./components/dashboard/ClinicPatientDashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
 import OrganizationDashboard from "./pages/dashboard/OrganizationDashboard";
 import Staff from "./pages/dashboard/Staff";
@@ -150,6 +152,14 @@ export const router = createBrowserRouter([
           {
             path: "/athlete",
             element: <AthleteDashboardLayout />,
+          },
+          {
+            path: "/pt",
+            element: <PTDashboardLayout />,
+          },
+          {
+            path: "/clinic-patient",
+            element: <ClinicPatientDashboardLayout />,
           },
         ],
       },
