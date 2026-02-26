@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import NoviaLogo from "@/components/ui/NoviaLogo";
 import { cn } from "@/lib/utils";
+import { HumanBodyDiagram, PatientAnalytics } from "./HumanBodyDiagram";
 
 // PT Portal page types - top nav pages
 type PTPage = "dashboard" | "patients" | "schedule" | "emr" | "documents" | "admin" | "settings";
@@ -109,6 +110,42 @@ const ENCOUNTER_TYPES = [
   "Daily Note",
 ];
 
+// Injury location type for body diagram
+interface PatientInjury {
+  id: string;
+  area: string;
+  x: number;
+  y: number;
+  severity: "mild" | "moderate" | "severe";
+  diagnosis: string;
+  metrics?: Array<{
+    exercise: string;
+    value: number;
+    unit: string;
+    comparison?: { baseline?: number; goal?: number };
+    date: string;
+  }>;
+}
+
+// Body imbalance data type
+interface PatientImbalance {
+  exercise: string;
+  leftSide: number;
+  rightSide: number;
+  imbalancePercent: number;
+  trend: "improving" | "declining" | "stable";
+}
+
+// Analytics data type
+interface PatientAnalyticsData {
+  painTrend: Array<{ date: string; value: number }>;
+  romTrend: Array<{ date: string; value: number }>;
+  strengthTrend: Array<{ date: string; value: number }>;
+  functionalScore: number;
+  visitCount: number;
+  progressPercentage: number;
+}
+
 // Mock patient data for demo with more details
 const MOCK_PATIENTS = [
   {
@@ -119,7 +156,49 @@ const MOCK_PATIENTS = [
     status: "active",
     activeCase: "Lumbar Disc Herniation",
     cases: ["Lumbar Disc Herniation", "Previous: Knee Sprain (2022)"],
-    history: "6 visits for lumbar disc. Showing good progress with conservative management."
+    history: "6 visits for lumbar disc. Showing good progress with conservative management.",
+    injuries: [
+      {
+        id: "inj-1",
+        area: "Lower Back (L4-L5)",
+        x: 100,
+        y: 145,
+        severity: "moderate" as const,
+        diagnosis: "Lumbar Disc Herniation L4-L5",
+        metrics: [
+          { exercise: "knee-extension", value: 82, unit: "Nm", comparison: { baseline: 70, goal: 100 }, date: "Jan 10" },
+          { exercise: "hip-flexion", value: 68, unit: "Nm", comparison: { baseline: 55, goal: 85 }, date: "Jan 10" },
+        ],
+      },
+    ] as PatientInjury[],
+    imbalanceData: [
+      { exercise: "knee-extension", leftSide: 82, rightSide: 85, imbalancePercent: 4, trend: "improving" as const },
+      { exercise: "hip-flexion", leftSide: 68, rightSide: 72, imbalancePercent: 6, trend: "stable" as const },
+    ] as PatientImbalance[],
+    analytics: {
+      painTrend: [
+        { date: "Dec 15", value: 7 },
+        { date: "Dec 22", value: 6 },
+        { date: "Dec 29", value: 5 },
+        { date: "Jan 5", value: 4 },
+        { date: "Jan 10", value: 4 },
+      ],
+      romTrend: [
+        { date: "Dec 15", value: 45 },
+        { date: "Dec 29", value: 60 },
+        { date: "Jan 10", value: 75 },
+      ],
+      strengthTrend: [
+        { date: "Dec 15", value: 55 },
+        { date: "Dec 22", value: 62 },
+        { date: "Dec 29", value: 70 },
+        { date: "Jan 5", value: 78 },
+        { date: "Jan 10", value: 82 },
+      ],
+      functionalScore: 72,
+      visitCount: 6,
+      progressPercentage: 65,
+    } as PatientAnalyticsData,
   },
   {
     id: "2",
@@ -129,7 +208,42 @@ const MOCK_PATIENTS = [
     status: "active",
     activeCase: "Rotator Cuff Tendinitis",
     cases: ["Rotator Cuff Tendinitis"],
-    history: "3 visits for right shoulder. Overhead athlete, baseball pitcher."
+    history: "3 visits for right shoulder. Overhead athlete, baseball pitcher.",
+    injuries: [
+      {
+        id: "inj-2",
+        area: "Right Shoulder",
+        x: 135,
+        y: 72,
+        severity: "moderate" as const,
+        diagnosis: "Rotator Cuff Tendinitis (Supraspinatus)",
+        metrics: [
+          { exercise: "hip-abduction", value: 45, unit: "Nm", comparison: { baseline: 38, goal: 60 }, date: "Jan 8" },
+        ],
+      },
+    ] as PatientInjury[],
+    imbalanceData: [
+      { exercise: "hip-abduction", leftSide: 58, rightSide: 45, imbalancePercent: 22, trend: "improving" as const },
+    ] as PatientImbalance[],
+    analytics: {
+      painTrend: [
+        { date: "Dec 28", value: 7 },
+        { date: "Jan 3", value: 6 },
+        { date: "Jan 8", value: 5 },
+      ],
+      romTrend: [
+        { date: "Dec 28", value: 70 },
+        { date: "Jan 8", value: 85 },
+      ],
+      strengthTrend: [
+        { date: "Dec 28", value: 38 },
+        { date: "Jan 3", value: 42 },
+        { date: "Jan 8", value: 45 },
+      ],
+      functionalScore: 68,
+      visitCount: 3,
+      progressPercentage: 45,
+    } as PatientAnalyticsData,
   },
   {
     id: "3",
@@ -139,7 +253,55 @@ const MOCK_PATIENTS = [
     status: "active",
     activeCase: "Post-op ACL Reconstruction",
     cases: ["Post-op ACL Reconstruction", "Meniscus Repair"],
-    history: "8 weeks post-op left ACL reconstruction. Progressing through protocol."
+    history: "8 weeks post-op left ACL reconstruction. Progressing through protocol.",
+    injuries: [
+      {
+        id: "inj-3",
+        area: "Left Knee",
+        x: 77,
+        y: 270,
+        severity: "severe" as const,
+        diagnosis: "Post-op ACL Reconstruction (Hamstring Autograft)",
+        metrics: [
+          { exercise: "knee-extension", value: 65, unit: "Nm", comparison: { baseline: 45, goal: 95 }, date: "Jan 5" },
+          { exercise: "knee-flexion", value: 48, unit: "Nm", comparison: { baseline: 32, goal: 75 }, date: "Jan 5" },
+          { exercise: "cmj", value: 18, unit: "cm", comparison: { baseline: 12, goal: 35 }, date: "Jan 5" },
+          { exercise: "single-leg-hop", value: 62, unit: "cm", comparison: { baseline: 45, goal: 95 }, date: "Jan 5" },
+        ],
+      },
+    ] as PatientInjury[],
+    imbalanceData: [
+      { exercise: "knee-extension", leftSide: 65, rightSide: 92, imbalancePercent: 29, trend: "improving" as const },
+      { exercise: "knee-flexion", leftSide: 48, rightSide: 72, imbalancePercent: 33, trend: "improving" as const },
+      { exercise: "cmj", leftSide: 18, rightSide: 32, imbalancePercent: 44, trend: "improving" as const },
+      { exercise: "single-leg-hop", leftSide: 62, rightSide: 95, imbalancePercent: 35, trend: "improving" as const },
+    ] as PatientImbalance[],
+    analytics: {
+      painTrend: [
+        { date: "Nov 15", value: 8 },
+        { date: "Nov 29", value: 6 },
+        { date: "Dec 15", value: 4 },
+        { date: "Dec 29", value: 3 },
+        { date: "Jan 5", value: 2 },
+      ],
+      romTrend: [
+        { date: "Nov 15", value: 30 },
+        { date: "Nov 29", value: 55 },
+        { date: "Dec 15", value: 75 },
+        { date: "Dec 29", value: 88 },
+        { date: "Jan 5", value: 92 },
+      ],
+      strengthTrend: [
+        { date: "Nov 15", value: 25 },
+        { date: "Nov 29", value: 35 },
+        { date: "Dec 15", value: 48 },
+        { date: "Dec 29", value: 58 },
+        { date: "Jan 5", value: 65 },
+      ],
+      functionalScore: 58,
+      visitCount: 12,
+      progressPercentage: 55,
+    } as PatientAnalyticsData,
   },
   {
     id: "4",
@@ -149,7 +311,32 @@ const MOCK_PATIENTS = [
     status: "discharged",
     activeCase: "Cervical Radiculopathy",
     cases: ["Cervical Radiculopathy (Discharged)"],
-    history: "Completed 12 visits. Discharged with home program."
+    history: "Completed 12 visits. Discharged with home program.",
+    injuries: [] as PatientInjury[],
+    imbalanceData: [] as PatientImbalance[],
+    analytics: {
+      painTrend: [
+        { date: "Oct 1", value: 7 },
+        { date: "Oct 15", value: 5 },
+        { date: "Nov 1", value: 3 },
+        { date: "Nov 15", value: 2 },
+        { date: "Dec 20", value: 0 },
+      ],
+      romTrend: [
+        { date: "Oct 1", value: 60 },
+        { date: "Nov 1", value: 85 },
+        { date: "Dec 20", value: 100 },
+      ],
+      strengthTrend: [
+        { date: "Oct 1", value: 70 },
+        { date: "Oct 15", value: 80 },
+        { date: "Nov 1", value: 90 },
+        { date: "Dec 20", value: 100 },
+      ],
+      functionalScore: 98,
+      visitCount: 12,
+      progressPercentage: 100,
+    } as PatientAnalyticsData,
   },
 ];
 
@@ -1602,49 +1789,91 @@ function EMRContent({ patient, section, storedEncounters }: { patient: typeof MO
 
       {/* Section Content */}
       {section === "overview" && (
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <h3 className="font-semibold text-slate-900 mb-4">Patient Information</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-sm text-muted-foreground">Phone</span>
-                <span className="text-sm font-medium">(555) 123-4567</span>
+        <div className="space-y-6">
+          {/* Top Row: Patient Info + Active Cases */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+              <h3 className="font-semibold text-slate-900 mb-4">Patient Information</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-sm text-muted-foreground">Phone</span>
+                  <span className="text-sm font-medium">(555) 123-4567</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-sm text-muted-foreground">Email</span>
+                  <span className="text-sm font-medium">{patient.name.toLowerCase().replace(' ', '.')}@email.com</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100">
+                  <span className="text-sm text-muted-foreground">Insurance</span>
+                  <span className="text-sm font-medium">Blue Cross Blue Shield</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-sm text-muted-foreground">Last Visit</span>
+                  <span className="text-sm font-medium">{patient.lastVisit}</span>
+                </div>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-sm text-muted-foreground">Email</span>
-                <span className="text-sm font-medium">{patient.name.toLowerCase().replace(' ', '.')}@email.com</span>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+              <h3 className="font-semibold text-slate-900 mb-4">Active Cases</h3>
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-slate-900">{patient.activeCase || "Low Back Pain"}</span>
+                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Active</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Started: Dec 15, 2023 • {patientEncounters.length + 6} visits</p>
+                </div>
               </div>
-              <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-sm text-muted-foreground">Insurance</span>
-                <span className="text-sm font-medium">Blue Cross Blue Shield</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-sm text-muted-foreground">Last Visit</span>
-                <span className="text-sm font-medium">{patient.lastVisit}</span>
-              </div>
+              <Button variant="ghost" size="sm" className="w-full mt-3 text-muted-foreground">
+                View All Cases
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <h3 className="font-semibold text-slate-900 mb-4">Active Cases</h3>
-            <div className="space-y-3">
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-slate-900">{patient.activeCase || "Low Back Pain"}</span>
-                  <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Active</span>
+          {/* Body Diagram Section */}
+          {patient.injuries && patient.injuries.length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-slate-900">Body Assessment</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">Interactive injury map with exercise metrics</p>
                 </div>
-                <p className="text-xs text-muted-foreground">Started: Dec 15, 2023 • {patientEncounters.length + 6} visits</p>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                  {patient.injuries.length} injury {patient.injuries.length === 1 ? "site" : "sites"}
+                </span>
               </div>
+              <HumanBodyDiagram
+                injuries={patient.injuries}
+                imbalanceData={patient.imbalanceData}
+              />
             </div>
-            <Button variant="ghost" size="sm" className="w-full mt-3 text-muted-foreground">
-              View All Cases
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
+          )}
+
+          {/* Analytics & Trends Section */}
+          {patient.analytics && (
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-slate-900">Analytics & Trends</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">Treatment progress and outcome tracking</p>
+                </div>
+              </div>
+              <PatientAnalytics
+                painTrend={patient.analytics.painTrend}
+                romTrend={patient.analytics.romTrend}
+                strengthTrend={patient.analytics.strengthTrend}
+                functionalScore={patient.analytics.functionalScore}
+                visitCount={patient.analytics.visitCount}
+                progressPercentage={patient.analytics.progressPercentage}
+              />
+            </div>
+          )}
 
           {/* Recent Encounters on Overview */}
           {patientEncounters.length > 0 && (
-            <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white p-6">
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-slate-900">Recent Encounters</h3>
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
