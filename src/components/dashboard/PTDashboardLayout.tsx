@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { authClient } from "@/lib/auth-client";
 import FullPageSpinner from "@/components/ui/FullPageSpinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   LogOut,
   ArrowLeft,
@@ -26,6 +27,14 @@ import {
   ChevronDown,
   X,
   HelpCircle,
+  Mic,
+  MicOff,
+  Sparkles,
+  Check,
+  AlertCircle,
+  Loader2,
+  Edit3,
+  Dumbbell,
 } from "lucide-react";
 import NoviaLogo from "@/components/ui/NoviaLogo";
 import { cn } from "@/lib/utils";
@@ -35,6 +44,24 @@ type PTPage = "dashboard" | "patients" | "schedule" | "emr" | "documents" | "adm
 
 // EMR sidebar navigation sections
 type EMRSection = "overview" | "cases" | "encounters" | "documents" | "billing";
+
+// AI Capture states
+type AICaptureStep = "idle" | "recording" | "processing" | "review";
+
+// Parsed note structure from AI
+interface ParsedNote {
+  patientName: string;
+  patientMatch: typeof MOCK_PATIENTS[0] | null;
+  encounterType: string;
+  caseTitle: string;
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string;
+  exercises: string[];
+  summary: string;
+  confidence: number;
+}
 
 const NAV_ITEMS: { id: PTPage; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -56,10 +83,10 @@ const EMR_SIDEBAR_ITEMS: { id: EMRSection; label: string; icon: typeof LayoutDas
 
 // Mock patient data for demo
 const MOCK_PATIENTS = [
-  { id: "1", name: "Sarah Johnson", dob: "1985-03-15", lastVisit: "2024-01-10", status: "active" },
-  { id: "2", name: "Michael Chen", dob: "1992-07-22", lastVisit: "2024-01-08", status: "active" },
-  { id: "3", name: "Emily Rodriguez", dob: "1978-11-30", lastVisit: "2024-01-05", status: "active" },
-  { id: "4", name: "James Wilson", dob: "1965-05-18", lastVisit: "2023-12-20", status: "discharged" },
+  { id: "1", name: "Sarah Johnson", dob: "1985-03-15", lastVisit: "2024-01-10", status: "active", activeCase: "Lumbar Disc Herniation" },
+  { id: "2", name: "Michael Chen", dob: "1992-07-22", lastVisit: "2024-01-08", status: "active", activeCase: "Rotator Cuff Tendinitis" },
+  { id: "3", name: "Emily Rodriguez", dob: "1978-11-30", lastVisit: "2024-01-05", status: "active", activeCase: "Post-op ACL Reconstruction" },
+  { id: "4", name: "James Wilson", dob: "1965-05-18", lastVisit: "2023-12-20", status: "discharged", activeCase: "Cervical Radiculopathy" },
 ];
 
 export default function PTDashboardLayout() {
@@ -68,6 +95,12 @@ export default function PTDashboardLayout() {
   const [emrSection, setEmrSection] = useState<EMRSection>("overview");
   const [selectedPatient, setSelectedPatient] = useState<typeof MOCK_PATIENTS[0] | null>(null);
   const [patientSearch, setPatientSearch] = useState("");
+
+  // AI Capture state
+  const [aiCaptureStep, setAiCaptureStep] = useState<AICaptureStep>("idle");
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [parsedNote, setParsedNote] = useState<ParsedNote | null>(null);
 
   // For now, we'll use a simple flag to simulate admin access
   // In production, this would come from the practiceUsers table
@@ -102,10 +135,67 @@ export default function PTDashboardLayout() {
     p.name.toLowerCase().includes(patientSearch.toLowerCase())
   );
 
+  // AI Capture handlers
+  const handleStartAICapture = () => {
+    setAiCaptureStep("recording");
+    setIsRecording(true);
+    setRecordingTime(0);
+  };
+
+  const handleStopRecording = () => {
+    setIsRecording(false);
+    setAiCaptureStep("processing");
+
+    // Simulate AI processing (in production, this would send audio to AI service)
+    setTimeout(() => {
+      // Mock parsed result - in production this comes from AI
+      const mockParsedNote: ParsedNote = {
+        patientName: "Sarah Johnson",
+        patientMatch: MOCK_PATIENTS[0],
+        encounterType: "Follow-up",
+        caseTitle: "Lumbar Disc Herniation",
+        subjective: "Patient reports pain decreased from 6/10 to 4/10 since last visit. Sleeping better, able to sit for longer periods. Still has some discomfort with prolonged standing.",
+        objective: "Flexion ROM improved to 45 degrees (was 30). Extension still limited to 10 degrees. Tenderness reduced over L4-L5. SLR negative bilaterally. Core activation improved.",
+        assessment: "Patient showing good progress with conservative management. Pain reduction and improved ROM indicate positive response to current treatment approach.",
+        plan: "Continue current exercise program. Progress to standing stabilization exercises. Re-evaluate in 1 week. Patient to continue home program daily.",
+        exercises: [
+          "Prone press-ups - 3 sets of 10",
+          "Bird dogs - 3 sets of 10 each side",
+          "McGill curl-ups - 3 sets of 10",
+          "Supine piriformis stretch - 30 sec hold x 3"
+        ],
+        summary: "Follow-up visit for lumbar disc herniation. Patient improving with decreased pain and increased ROM. Continuing conservative treatment with progression of exercises.",
+        confidence: 94,
+      };
+
+      setParsedNote(mockParsedNote);
+      setAiCaptureStep("review");
+    }, 2500);
+  };
+
+  const handleCancelCapture = () => {
+    setAiCaptureStep("idle");
+    setIsRecording(false);
+    setRecordingTime(0);
+    setParsedNote(null);
+  };
+
+  const handlePropagate = () => {
+    // In production, this would save to the database
+    // For now, just show success and close
+    alert("Note propagated successfully! The encounter has been added to " + parsedNote?.patientMatch?.name + "'s record.");
+    handleCancelCapture();
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case "dashboard":
-        return <ClinicHubDashboard userName={session?.user?.name || "Clinician"} />;
+        return (
+          <ClinicHubDashboard
+            userName={session?.user?.name || "Clinician"}
+            onStartAICapture={handleStartAICapture}
+          />
+        );
       case "patients":
         return <PTPatientsPlaceholder />;
       case "schedule":
@@ -130,7 +220,12 @@ export default function PTDashboardLayout() {
       case "settings":
         return <PTSettingsPlaceholder />;
       default:
-        return <ClinicHubDashboard userName={session?.user?.name || "Clinician"} />;
+        return (
+          <ClinicHubDashboard
+            userName={session?.user?.name || "Clinician"}
+            onStartAICapture={handleStartAICapture}
+          />
+        );
     }
   };
 
@@ -233,6 +328,382 @@ export default function PTDashboardLayout() {
       <div className="flex flex-1 overflow-hidden">
         {renderPage()}
       </div>
+
+      {/* AI Capture Modal */}
+      {aiCaptureStep !== "idle" && (
+        <AICaptureModal
+          step={aiCaptureStep}
+          isRecording={isRecording}
+          recordingTime={recordingTime}
+          setRecordingTime={setRecordingTime}
+          parsedNote={parsedNote}
+          setParsedNote={setParsedNote}
+          onStopRecording={handleStopRecording}
+          onCancel={handleCancelCapture}
+          onPropagate={handlePropagate}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// AI CAPTURE MODAL - Voice recording and confirmation
+// ============================================================================
+
+interface AICaptureModalProps {
+  step: AICaptureStep;
+  isRecording: boolean;
+  recordingTime: number;
+  setRecordingTime: (time: number) => void;
+  parsedNote: ParsedNote | null;
+  setParsedNote: (note: ParsedNote | null) => void;
+  onStopRecording: () => void;
+  onCancel: () => void;
+  onPropagate: () => void;
+}
+
+function AICaptureModal({
+  step,
+  isRecording,
+  recordingTime,
+  setRecordingTime,
+  parsedNote,
+  setParsedNote,
+  onStopRecording,
+  onCancel,
+  onPropagate,
+}: AICaptureModalProps) {
+  // Recording timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingTime(recordingTime + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording, recordingTime, setRecordingTime]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className={cn(
+        "bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300",
+        step === "review" ? "w-full max-w-4xl max-h-[90vh]" : "w-full max-w-lg"
+      )}>
+        {/* Recording Step */}
+        {step === "recording" && (
+          <div className="p-8">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <Sparkles className="h-6 w-6 text-blue-600" />
+                <h2 className="text-xl font-semibold text-slate-900">Hands-Free AI</h2>
+              </div>
+
+              <p className="text-muted-foreground mb-8">
+                Speak naturally about your patient encounter. Include the patient name,
+                what you observed, and your treatment plan.
+              </p>
+
+              {/* Recording Indicator */}
+              <div className="relative mb-8">
+                <div className={cn(
+                  "w-32 h-32 mx-auto rounded-full flex items-center justify-center transition-all",
+                  isRecording ? "bg-red-100 animate-pulse" : "bg-slate-100"
+                )}>
+                  <div className={cn(
+                    "w-24 h-24 rounded-full flex items-center justify-center",
+                    isRecording ? "bg-red-500" : "bg-slate-200"
+                  )}>
+                    <Mic className={cn(
+                      "h-10 w-10",
+                      isRecording ? "text-white" : "text-slate-400"
+                    )} />
+                  </div>
+                </div>
+
+                {isRecording && (
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
+                    <span className="inline-flex items-center gap-2 bg-red-500 text-white text-sm font-medium px-3 py-1 rounded-full">
+                      <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                      Recording {formatTime(recordingTime)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Example prompt */}
+              <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Example:</p>
+                <p className="text-sm text-slate-600 italic">
+                  "Follow-up with Sarah Johnson for her lumbar disc. She says pain is down from 6 to 4.
+                  ROM improved, did prone press-ups and bird dogs today. Plan to continue and progress next week."
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-center gap-3">
+                <Button variant="outline" onClick={onCancel}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={onStopRecording}
+                  className="bg-red-500 hover:bg-red-600"
+                >
+                  <MicOff className="h-4 w-4 mr-2" />
+                  Stop Recording
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Processing Step */}
+        {step === "processing" && (
+          <div className="p-8">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <Sparkles className="h-6 w-6 text-blue-600" />
+                <h2 className="text-xl font-semibold text-slate-900">Processing...</h2>
+              </div>
+
+              <div className="w-16 h-16 mx-auto mb-6">
+                <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
+              </div>
+
+              <p className="text-muted-foreground">
+                AI is analyzing your recording and matching patient information...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Review Step - Confirmation Popup */}
+        {step === "review" && parsedNote && (
+          <div className="flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                  <Sparkles className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-slate-900">Review AI-Generated Note</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Confidence: {parsedNote.confidence}%
+                  </p>
+                </div>
+              </div>
+              <button onClick={onCancel} className="text-slate-400 hover:text-slate-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Patient Match Card */}
+              <div className="mb-6">
+                <label className="text-sm font-medium text-slate-700 mb-2 block">Matched Patient</label>
+                {parsedNote.patientMatch ? (
+                  <div className="flex items-center gap-4 p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-lg font-semibold text-emerald-700">
+                      {parsedNote.patientMatch.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-slate-900">{parsedNote.patientMatch.name}</p>
+                        <Check className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        DOB: {parsedNote.patientMatch.dob} • Active Case: {parsedNote.patientMatch.activeCase}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm">
+                      <Edit3 className="h-4 w-4 mr-1" />
+                      Change
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4 p-4 rounded-xl border-2 border-amber-200 bg-amber-50">
+                    <AlertCircle className="h-8 w-8 text-amber-600" />
+                    <div className="flex-1">
+                      <p className="font-medium text-amber-800">Could not match patient</p>
+                      <p className="text-sm text-amber-700">Heard: "{parsedNote.patientName}"</p>
+                    </div>
+                    <Button variant="outline" size="sm">Select Patient</Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Encounter Type & Case */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 mb-2 block">Encounter Type</label>
+                  <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-white">
+                    <ClipboardList className="h-4 w-4 text-slate-400" />
+                    <span className="font-medium">{parsedNote.encounterType}</span>
+                    <Button variant="ghost" size="sm" className="ml-auto h-6 px-2">
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 mb-2 block">Case</label>
+                  <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-white">
+                    <FolderOpen className="h-4 w-4 text-slate-400" />
+                    <span className="font-medium">{parsedNote.caseTitle}</span>
+                    <Button variant="ghost" size="sm" className="ml-auto h-6 px-2">
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* SOAP Note */}
+              <div className="mb-6">
+                <label className="text-sm font-medium text-slate-700 mb-3 block">SOAP Note</label>
+                <div className="space-y-4">
+                  <SOAPSection
+                    label="Subjective"
+                    value={parsedNote.subjective}
+                    onChange={(val) => setParsedNote({ ...parsedNote, subjective: val })}
+                    color="blue"
+                  />
+                  <SOAPSection
+                    label="Objective"
+                    value={parsedNote.objective}
+                    onChange={(val) => setParsedNote({ ...parsedNote, objective: val })}
+                    color="emerald"
+                  />
+                  <SOAPSection
+                    label="Assessment"
+                    value={parsedNote.assessment}
+                    onChange={(val) => setParsedNote({ ...parsedNote, assessment: val })}
+                    color="amber"
+                  />
+                  <SOAPSection
+                    label="Plan"
+                    value={parsedNote.plan}
+                    onChange={(val) => setParsedNote({ ...parsedNote, plan: val })}
+                    color="purple"
+                  />
+                </div>
+              </div>
+
+              {/* Exercises */}
+              <div className="mb-6">
+                <label className="text-sm font-medium text-slate-700 mb-3 block flex items-center gap-2">
+                  <Dumbbell className="h-4 w-4" />
+                  Exercises Documented
+                </label>
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="space-y-2">
+                    {parsedNote.exercises.map((exercise, i) => (
+                      <div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-slate-50">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-700">
+                          {i + 1}
+                        </span>
+                        <Input
+                          value={exercise}
+                          onChange={(e) => {
+                            const newExercises = [...parsedNote.exercises];
+                            newExercises[i] = e.target.value;
+                            setParsedNote({ ...parsedNote, exercises: newExercises });
+                          }}
+                          className="flex-1 border-0 bg-transparent p-0 h-auto focus-visible:ring-0"
+                        />
+                        <button
+                          onClick={() => {
+                            const newExercises = parsedNote.exercises.filter((_, idx) => idx !== i);
+                            setParsedNote({ ...parsedNote, exercises: newExercises });
+                          }}
+                          className="text-slate-400 hover:text-red-500"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 text-muted-foreground"
+                    onClick={() => setParsedNote({ ...parsedNote, exercises: [...parsedNote.exercises, ""] })}
+                  >
+                    + Add Exercise
+                  </Button>
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div>
+                <label className="text-sm font-medium text-slate-700 mb-2 block">Visit Summary</label>
+                <Textarea
+                  value={parsedNote.summary}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setParsedNote({ ...parsedNote, summary: e.target.value })}
+                  className="min-h-[80px]"
+                />
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex items-center justify-between p-4 border-t border-slate-200 bg-slate-50">
+              <Button variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <div className="flex items-center gap-3">
+                <Button variant="outline">
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Edit in EMR
+                </Button>
+                <Button onClick={onPropagate} className="bg-emerald-600 hover:bg-emerald-700">
+                  <Check className="h-4 w-4 mr-2" />
+                  Propagate to EMR
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// SOAP Section editable component
+function SOAPSection({
+  label,
+  value,
+  onChange,
+  color
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  color: "blue" | "emerald" | "amber" | "purple";
+}) {
+  const colorStyles = {
+    blue: "border-l-blue-500 bg-blue-50/50",
+    emerald: "border-l-emerald-500 bg-emerald-50/50",
+    amber: "border-l-amber-500 bg-amber-50/50",
+    purple: "border-l-purple-500 bg-purple-50/50",
+  };
+
+  return (
+    <div className={cn("border-l-4 rounded-r-lg p-3", colorStyles[color])}>
+      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">
+        {label}
+      </label>
+      <Textarea
+        value={value}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
+        className="min-h-[60px] border-0 bg-transparent p-0 resize-none focus-visible:ring-0 text-sm"
+      />
     </div>
   );
 }
@@ -241,7 +712,7 @@ export default function PTDashboardLayout() {
 // CLINIC HUB DASHBOARD - Based on first reference image
 // ============================================================================
 
-function ClinicHubDashboard({ userName }: { userName: string }) {
+function ClinicHubDashboard({ userName, onStartAICapture }: { userName: string; onStartAICapture: () => void }) {
   return (
     <div className="flex-1 overflow-y-auto">
       {/* Hero Banner */}
@@ -267,8 +738,39 @@ function ClinicHubDashboard({ userName }: { userName: string }) {
         </div>
       </div>
 
-      {/* Featured Card - Recent Activity or Highlighted Patient */}
+      {/* AI Quick Capture Banner */}
       <div className="px-8 -mt-6 relative z-10">
+        <div className="rounded-xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm overflow-hidden">
+          <div className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+                  <Sparkles className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Hands-Free AI Documentation
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Speak naturally and let AI create your clinical notes instantly
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={onStartAICapture}
+                size="lg"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+              >
+                <Mic className="h-5 w-5 mr-2" />
+                Start Voice Capture
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Featured Card - Recent Activity or Highlighted Patient */}
+      <div className="px-8 mt-4">
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="p-6">
             <div className="flex items-start justify-between">
@@ -673,7 +1175,7 @@ function EMRContent({ patient, section }: { patient: typeof MOCK_PATIENTS[0]; se
             <div className="space-y-3">
               <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-slate-900">Low Back Pain</span>
+                  <span className="font-medium text-slate-900">{patient.activeCase || "Low Back Pain"}</span>
                   <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Active</span>
                 </div>
                 <p className="text-xs text-muted-foreground">Started: Dec 15, 2023 • 6 visits</p>
@@ -693,7 +1195,7 @@ function EMRContent({ patient, section }: { patient: typeof MOCK_PATIENTS[0]; se
           <div className="space-y-4">
             <div className="p-4 rounded-lg border border-slate-200 hover:border-slate-300 cursor-pointer transition-colors">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-medium text-slate-900">Low Back Pain - Lumbar Disc Herniation</span>
+                <span className="font-medium text-slate-900">{patient.activeCase || "Low Back Pain"} - Lumbar Disc Herniation</span>
                 <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Active</span>
               </div>
               <p className="text-sm text-muted-foreground mb-2">ICD-10: M51.16</p>
