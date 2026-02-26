@@ -773,6 +773,95 @@ export default defineSchema({
     .index("by_stripeSubscriptionId", ["stripeSubscriptionId"])
     .index("by_status", ["status"]),
 
+  // Practice Appointments - Scheduling for clinicians and patients
+  practiceAppointments: defineTable({
+    practiceId: v.id("clinicPractices"),
+    patientId: v.id("practicePatients"),
+    clinicianId: v.id("practiceUsers"), // Assigned clinician
+    caseId: v.optional(v.id("practiceCases")), // Link to treatment case
+    // Scheduling
+    scheduledStart: v.number(), // Unix timestamp
+    scheduledEnd: v.number(), // Unix timestamp
+    durationMinutes: v.number(),
+    // Appointment details
+    appointmentType: v.union(
+      v.literal("initial_evaluation"),
+      v.literal("follow_up"),
+      v.literal("re_evaluation"),
+      v.literal("discharge"),
+      v.literal("consultation"),
+      v.literal("other")
+    ),
+    title: v.optional(v.string()), // Custom title if needed
+    notes: v.optional(v.string()), // Pre-appointment notes
+    // Status tracking
+    status: v.union(
+      v.literal("scheduled"),
+      v.literal("confirmed"),
+      v.literal("checked_in"),
+      v.literal("in_progress"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+      v.literal("no_show")
+    ),
+    // Cancellation
+    cancelledAt: v.optional(v.number()),
+    cancelledByUserId: v.optional(v.id("practiceUsers")),
+    cancelledByPatient: v.optional(v.boolean()),
+    cancellationReason: v.optional(v.string()),
+    // Reminders
+    reminderSentAt: v.optional(v.number()),
+    // Recurring appointments
+    isRecurring: v.optional(v.boolean()),
+    recurringPatternJson: v.optional(v.string()), // JSON with recurrence rule
+    parentAppointmentId: v.optional(v.id("practiceAppointments")), // Link to parent recurring
+    // Metadata
+    createdByUserId: v.id("practiceUsers"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_patientId", ["patientId"])
+    .index("by_clinicianId", ["clinicianId"])
+    .index("by_caseId", ["caseId"])
+    .index("by_scheduledStart", ["scheduledStart"])
+    .index("by_status", ["status"])
+    .index("by_practiceId_and_scheduledStart", ["practiceId", "scheduledStart"])
+    .index("by_clinicianId_and_scheduledStart", ["clinicianId", "scheduledStart"])
+    .index("by_patientId_and_scheduledStart", ["patientId", "scheduledStart"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // Clinician Availability - Working hours and blocked time
+  clinicianAvailability: defineTable({
+    practiceId: v.id("clinicPractices"),
+    clinicianId: v.id("practiceUsers"),
+    // Type of availability entry
+    entryType: v.union(
+      v.literal("working_hours"), // Regular schedule
+      v.literal("blocked"), // Time off, vacation, break
+      v.literal("available") // Extra availability
+    ),
+    // Time slot
+    dayOfWeek: v.optional(v.number()), // 0-6 for recurring working hours
+    startTime: v.optional(v.string()), // HH:MM for recurring
+    endTime: v.optional(v.string()), // HH:MM for recurring
+    // Specific date override
+    specificDate: v.optional(v.string()), // ISO date for one-time entries
+    specificStartTime: v.optional(v.number()), // Unix timestamp
+    specificEndTime: v.optional(v.number()), // Unix timestamp
+    // Metadata
+    reason: v.optional(v.string()), // Why blocked
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_clinicianId", ["clinicianId"])
+    .index("by_clinicianId_and_dayOfWeek", ["clinicianId", "dayOfWeek"])
+    .index("by_specificDate", ["specificDate"]),
+
   // Practice Audit Logs
   practiceAuditLogs: defineTable({
     practiceId: v.id("clinicPractices"),
