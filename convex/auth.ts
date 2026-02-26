@@ -9,16 +9,45 @@ import { sendEmail } from "./email";
 
 export const authClient = createClient(components.betterAuth);
 
-// Frontend URL - defaults to localhost for dev
-const siteUrl = process.env.SITE_URL ?? "http://localhost:5173";
+// Fallback URL for localhost development
+const fallbackSiteUrl = process.env.SITE_URL ?? "http://localhost:5173";
+
+// Check if an origin matches allowed patterns
+function isAllowedOrigin(origin: string): boolean {
+  // Localhost (any port)
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    return true;
+  }
+  // WebContainers (dev environments)
+  if (origin.endsWith(".local-corp.webcontainer-api.io")) {
+    return true;
+  }
+  // Vercel deployments (previews + production)
+  if (origin.endsWith(".vercel.app")) {
+    return true;
+  }
+  return false;
+}
+
+// Get the dynamic site URL from request origin (for crossDomain plugin)
+function getDynamicSiteUrl(request?: Request): string {
+  const requestOrigin = request?.headers.get("origin");
+
+  if (requestOrigin && isAllowedOrigin(requestOrigin)) {
+    return requestOrigin;
+  }
+
+  // Fall back to configured site URL
+  return fallbackSiteUrl;
+}
 
 // Get trusted origins based on the incoming request
 function getTrustedOrigins(request?: Request): string[] {
   const origins: string[] = [];
 
   // Always trust the configured site URL
-  if (siteUrl) {
-    origins.push(siteUrl);
+  if (fallbackSiteUrl) {
+    origins.push(fallbackSiteUrl);
   }
 
   // Explicit additional origins from env (for custom domains in prod)
@@ -31,25 +60,17 @@ function getTrustedOrigins(request?: Request): string[] {
 
   // Dynamically trust the request origin if it matches allowed patterns
   const requestOrigin = request?.headers.get("origin");
-  if (requestOrigin) {
-    // Localhost (any port)
-    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(requestOrigin)) {
-      origins.push(requestOrigin);
-    }
-    // WebContainers (dev environments)
-    else if (requestOrigin.endsWith(".local-corp.webcontainer-api.io")) {
-      origins.push(requestOrigin);
-    }
-    // Vercel deployments (previews + production)
-    else if (requestOrigin.endsWith(".vercel.app")) {
-      origins.push(requestOrigin);
-    }
+  if (requestOrigin && isAllowedOrigin(requestOrigin)) {
+    origins.push(requestOrigin);
   }
 
   return origins;
 }
 
-export function createAuth(ctx: GenericCtx<GenericDataModel>) {
+export function createAuth(ctx: GenericCtx<GenericDataModel>, request?: Request) {
+  // Use the request origin as siteUrl if it matches allowed patterns
+  const siteUrl = getDynamicSiteUrl(request);
+
   return betterAuth({
     baseURL: process.env.CONVEX_SITE_URL,
     secret: process.env.BETTER_AUTH_SECRET,
