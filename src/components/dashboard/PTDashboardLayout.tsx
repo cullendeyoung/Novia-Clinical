@@ -81,13 +81,152 @@ const EMR_SIDEBAR_ITEMS: { id: EMRSection; label: string; icon: typeof LayoutDas
   { id: "billing", label: "Billing", icon: Receipt },
 ];
 
-// Mock patient data for demo
-const MOCK_PATIENTS = [
-  { id: "1", name: "Sarah Johnson", dob: "1985-03-15", lastVisit: "2024-01-10", status: "active", activeCase: "Lumbar Disc Herniation" },
-  { id: "2", name: "Michael Chen", dob: "1992-07-22", lastVisit: "2024-01-08", status: "active", activeCase: "Rotator Cuff Tendinitis" },
-  { id: "3", name: "Emily Rodriguez", dob: "1978-11-30", lastVisit: "2024-01-05", status: "active", activeCase: "Post-op ACL Reconstruction" },
-  { id: "4", name: "James Wilson", dob: "1965-05-18", lastVisit: "2023-12-20", status: "discharged", activeCase: "Cervical Radiculopathy" },
+// Encounter types for PT
+const ENCOUNTER_TYPES = [
+  "Initial Evaluation",
+  "Follow-up",
+  "Re-evaluation",
+  "Discharge",
+  "Progress Note",
+  "Daily Note",
 ];
+
+// Mock patient data for demo with more details
+const MOCK_PATIENTS = [
+  {
+    id: "1",
+    name: "Sarah Johnson",
+    dob: "1985-03-15",
+    lastVisit: "2024-01-10",
+    status: "active",
+    activeCase: "Lumbar Disc Herniation",
+    cases: ["Lumbar Disc Herniation", "Previous: Knee Sprain (2022)"],
+    history: "6 visits for lumbar disc. Showing good progress with conservative management."
+  },
+  {
+    id: "2",
+    name: "Michael Chen",
+    dob: "1992-07-22",
+    lastVisit: "2024-01-08",
+    status: "active",
+    activeCase: "Rotator Cuff Tendinitis",
+    cases: ["Rotator Cuff Tendinitis"],
+    history: "3 visits for right shoulder. Overhead athlete, baseball pitcher."
+  },
+  {
+    id: "3",
+    name: "Emily Rodriguez",
+    dob: "1978-11-30",
+    lastVisit: "2024-01-05",
+    status: "active",
+    activeCase: "Post-op ACL Reconstruction",
+    cases: ["Post-op ACL Reconstruction", "Meniscus Repair"],
+    history: "8 weeks post-op left ACL reconstruction. Progressing through protocol."
+  },
+  {
+    id: "4",
+    name: "James Wilson",
+    dob: "1965-05-18",
+    lastVisit: "2023-12-20",
+    status: "discharged",
+    activeCase: "Cervical Radiculopathy",
+    cases: ["Cervical Radiculopathy (Discharged)"],
+    history: "Completed 12 visits. Discharged with home program."
+  },
+];
+
+// Mock note templates based on patient and encounter type
+function generateNoteForPatient(
+  patient: typeof MOCK_PATIENTS[0],
+  encounterType: string,
+  caseTitle: string
+): Omit<ParsedNote, 'patientName' | 'patientMatch' | 'confidence'> {
+  // Generate contextual notes based on patient history and case
+  const noteTemplates: Record<string, Record<string, Partial<ParsedNote>>> = {
+    "Sarah Johnson": {
+      "Lumbar Disc Herniation": {
+        subjective: "Patient reports pain decreased from 6/10 to 4/10 since last visit. Sleeping better, able to sit for longer periods. Still has some discomfort with prolonged standing.",
+        objective: "Flexion ROM improved to 45 degrees (was 30). Extension still limited to 10 degrees. Tenderness reduced over L4-L5. SLR negative bilaterally. Core activation improved.",
+        assessment: "Patient showing good progress with conservative management. Pain reduction and improved ROM indicate positive response to current treatment approach.",
+        plan: "Continue current exercise program. Progress to standing stabilization exercises. Re-evaluate in 1 week. Patient to continue home program daily.",
+        exercises: ["Prone press-ups - 3 sets of 10", "Bird dogs - 3 sets of 10 each side", "McGill curl-ups - 3 sets of 10", "Supine piriformis stretch - 30 sec hold x 3"],
+        summary: "Follow-up visit for lumbar disc herniation. Patient improving with decreased pain and increased ROM. Continuing conservative treatment with progression of exercises.",
+      },
+    },
+    "Michael Chen": {
+      "Rotator Cuff Tendinitis": {
+        subjective: "Patient reports right shoulder pain improved from 7/10 to 5/10. Less pain with overhead activities. Still experiencing discomfort during pitching motion.",
+        objective: "Active ROM: Flexion 165°, Abduction 160°, ER 85°, IR 70°. Strength 4/5 supraspinatus, 4+/5 infraspinatus. Positive Hawkins-Kennedy, negative empty can.",
+        assessment: "Rotator cuff tendinitis improving. Inflammation decreasing with modified activity and therapeutic exercises. Ready to begin sport-specific rehabilitation.",
+        plan: "Progress to eccentric loading exercises. Begin interval throwing program. Continue ice after activity. Follow up in 1 week.",
+        exercises: ["External rotation with band - 3x15", "Prone Y's and T's - 3x12", "Scapular retraction - 3x15", "Sleeper stretch - 30 sec x 3"],
+        summary: "Follow-up for right rotator cuff tendinitis. Patient is an overhead athlete (baseball pitcher). Progressing well, beginning sport-specific rehab phase.",
+      },
+    },
+    "Emily Rodriguez": {
+      "Post-op ACL Reconstruction": {
+        subjective: "Patient reports left knee feeling more stable. Able to walk without limp. Some stiffness in the morning that resolves with movement. No giving way episodes.",
+        objective: "ROM: Flexion 125° (goal 135°), Extension 0°. Quad strength 4-/5. No effusion. Patellar mobility normal. Single leg stance 30 seconds with minimal sway.",
+        assessment: "8 weeks post-op left ACL reconstruction with hamstring autograft. Meeting protocol milestones. Ready for progression to phase 3 activities.",
+        plan: "Begin step-ups and lateral movements. Progress closed chain strengthening. Continue home program. Pool exercises approved. Follow up in 2 weeks.",
+        exercises: ["Mini squats - 3x15", "Step-ups 4 inch - 3x12 each", "Stationary bike 15 min", "Quad sets with straight leg raise - 3x15", "Heel slides - 3x20"],
+        summary: "8-week post-op follow-up for left ACL reconstruction. Patient progressing well through protocol. Advancing to phase 3 rehabilitation activities.",
+      },
+      "Meniscus Repair": {
+        subjective: "Left knee stiffness improving. Weight bearing as tolerated without pain. Following precautions for meniscus protection.",
+        objective: "ROM progressing. Joint line tenderness resolved. Following meniscus repair protocol restrictions.",
+        assessment: "Meniscus repair healing appropriately. No signs of re-injury or complications.",
+        plan: "Continue restricted ROM exercises per protocol. Avoid deep squatting. Progress weight bearing as tolerated.",
+        exercises: ["Gentle ROM exercises", "Quad sets", "Ankle pumps", "Straight leg raises with brace"],
+        summary: "Follow-up for meniscus repair. Healing well with appropriate restrictions in place.",
+      },
+    },
+    "James Wilson": {
+      "Cervical Radiculopathy": {
+        subjective: "Patient reports neck pain and right arm symptoms have resolved. Able to perform daily activities without limitation. Numbness in right hand completely gone.",
+        objective: "Cervical ROM full and pain-free. Upper extremity strength 5/5 throughout. Negative Spurling's test. Sensation intact C5-T1 dermatomes.",
+        assessment: "Cervical radiculopathy resolved. Patient has met all functional goals and is appropriate for discharge.",
+        plan: "Discharge from physical therapy. Continue home exercise program independently. Return PRN if symptoms recur.",
+        exercises: ["Chin tucks - 2x10 daily", "Upper trap stretch - 30 sec x 2 each side", "Cervical rotation stretches", "Scapular squeezes - 2x15"],
+        summary: "Discharge visit for cervical radiculopathy. All symptoms resolved, full ROM and strength restored. Patient independent with home program.",
+      },
+    },
+  };
+
+  // Get template or generate default
+  const patientTemplates = noteTemplates[patient.name] || {};
+  const caseTemplate = patientTemplates[caseTitle] || {};
+
+  // Adjust content based on encounter type
+  const baseNote = {
+    encounterType,
+    caseTitle,
+    subjective: caseTemplate.subjective || `Patient presents for ${encounterType.toLowerCase()} regarding ${caseTitle}. Reports current symptoms and functional status.`,
+    objective: caseTemplate.objective || "Physical examination findings documented. ROM, strength, and special tests performed.",
+    assessment: caseTemplate.assessment || `${caseTitle} - Patient status assessed. Progress evaluated against treatment goals.`,
+    plan: caseTemplate.plan || "Continue current treatment plan. Patient education provided. Follow-up scheduled.",
+    exercises: caseTemplate.exercises || ["Therapeutic exercises as prescribed"],
+    summary: caseTemplate.summary || `${encounterType} for ${caseTitle}. Treatment provided and plan established.`,
+  };
+
+  // Modify for initial evaluation
+  if (encounterType === "Initial Evaluation") {
+    baseNote.subjective = `New patient evaluation for ${caseTitle}. Patient reports onset, mechanism of injury, and current functional limitations.`;
+    baseNote.assessment = `Initial evaluation completed for ${caseTitle}. Baseline measurements established. Treatment plan developed.`;
+    baseNote.plan = `Initiate treatment plan for ${caseTitle}. Patient education on diagnosis and expected recovery. Schedule follow-up visits.`;
+    baseNote.summary = `Initial evaluation for ${caseTitle}. Comprehensive assessment completed and treatment plan established.`;
+  }
+
+  // Modify for discharge
+  if (encounterType === "Discharge") {
+    baseNote.subjective = `Final visit for ${caseTitle}. Patient reports functional goals achieved and symptoms resolved or manageable.`;
+    baseNote.assessment = `${caseTitle} - Discharge criteria met. Patient has achieved therapy goals.`;
+    baseNote.plan = `Discharge from physical therapy. Independent home program provided. Return PRN if symptoms recur.`;
+    baseNote.summary = `Discharge visit for ${caseTitle}. All goals met, patient discharged with home program.`;
+  }
+
+  return baseNote;
+}
 
 export default function PTDashboardLayout() {
   const { data: session, isPending: isSessionPending } = authClient.useSession();
@@ -374,6 +513,13 @@ function AICaptureModal({
   onCancel,
   onPropagate,
 }: AICaptureModalProps) {
+  // Dropdown states
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  const [showEncounterDropdown, setShowEncounterDropdown] = useState(false);
+  const [showCaseDropdown, setShowCaseDropdown] = useState(false);
+  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
   // Recording timer
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -389,6 +535,84 @@ function AICaptureModal({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Filter patients based on search
+  const filteredPatients = MOCK_PATIENTS.filter(p =>
+    p.name.toLowerCase().includes(patientSearchQuery.toLowerCase())
+  );
+
+  // Get available cases for selected patient
+  const availableCases = parsedNote?.patientMatch?.cases || [];
+
+  // Handle patient change - regenerates the note
+  const handlePatientChange = (patient: typeof MOCK_PATIENTS[0]) => {
+    if (!parsedNote) return;
+
+    setIsRegenerating(true);
+    setShowPatientDropdown(false);
+    setPatientSearchQuery("");
+
+    // Simulate AI regeneration delay
+    setTimeout(() => {
+      const newCase = patient.activeCase;
+      const regeneratedNote = generateNoteForPatient(patient, parsedNote.encounterType, newCase);
+
+      setParsedNote({
+        ...parsedNote,
+        ...regeneratedNote,
+        patientName: patient.name,
+        patientMatch: patient,
+        confidence: 98, // Higher confidence since user confirmed
+      });
+      setIsRegenerating(false);
+    }, 800);
+  };
+
+  // Handle encounter type change - regenerates the note
+  const handleEncounterTypeChange = (newEncounterType: string) => {
+    if (!parsedNote || !parsedNote.patientMatch) return;
+
+    setIsRegenerating(true);
+    setShowEncounterDropdown(false);
+
+    setTimeout(() => {
+      const regeneratedNote = generateNoteForPatient(
+        parsedNote.patientMatch!,
+        newEncounterType,
+        parsedNote.caseTitle
+      );
+
+      setParsedNote({
+        ...parsedNote,
+        ...regeneratedNote,
+        confidence: 98,
+      });
+      setIsRegenerating(false);
+    }, 600);
+  };
+
+  // Handle case change - regenerates the note
+  const handleCaseChange = (newCaseTitle: string) => {
+    if (!parsedNote || !parsedNote.patientMatch) return;
+
+    setIsRegenerating(true);
+    setShowCaseDropdown(false);
+
+    setTimeout(() => {
+      const regeneratedNote = generateNoteForPatient(
+        parsedNote.patientMatch!,
+        parsedNote.encounterType,
+        newCaseTitle
+      );
+
+      setParsedNote({
+        ...parsedNote,
+        ...regeneratedNote,
+        confidence: 98,
+      });
+      setIsRegenerating(false);
+    }, 600);
   };
 
   return (
@@ -491,10 +715,16 @@ function AICaptureModal({
             <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                  <Sparkles className="h-5 w-5 text-blue-600" />
+                  {isRegenerating ? (
+                    <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-5 w-5 text-blue-600" />
+                  )}
                 </div>
                 <div>
-                  <h2 className="font-semibold text-slate-900">Review AI-Generated Note</h2>
+                  <h2 className="font-semibold text-slate-900">
+                    {isRegenerating ? "Regenerating Note..." : "Review AI-Generated Note"}
+                  </h2>
                   <p className="text-sm text-muted-foreground">
                     Confidence: {parsedNote.confidence}%
                   </p>
@@ -505,13 +735,26 @@ function AICaptureModal({
               </button>
             </div>
 
+            {/* Regenerating Overlay */}
+            {isRegenerating && (
+              <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center rounded-2xl">
+                <div className="text-center">
+                  <Loader2 className="h-10 w-10 text-blue-600 animate-spin mx-auto mb-3" />
+                  <p className="text-sm font-medium text-slate-700">Regenerating note with updated context...</p>
+                </div>
+              </div>
+            )}
+
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              {/* Patient Match Card */}
-              <div className="mb-6">
+              {/* Patient Match Card with Dropdown */}
+              <div className="mb-6 relative">
                 <label className="text-sm font-medium text-slate-700 mb-2 block">Matched Patient</label>
                 {parsedNote.patientMatch ? (
-                  <div className="flex items-center gap-4 p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50">
+                  <div
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50 cursor-pointer hover:border-emerald-300 transition-colors"
+                    onClick={() => setShowPatientDropdown(!showPatientDropdown)}
+                  >
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-lg font-semibold text-emerald-700">
                       {parsedNote.patientMatch.name.split(' ').map(n => n[0]).join('')}
                     </div>
@@ -524,46 +767,167 @@ function AICaptureModal({
                         DOB: {parsedNote.patientMatch.dob} • Active Case: {parsedNote.patientMatch.activeCase}
                       </p>
                     </div>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setShowPatientDropdown(!showPatientDropdown); }}>
                       <Edit3 className="h-4 w-4 mr-1" />
                       Change
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-4 p-4 rounded-xl border-2 border-amber-200 bg-amber-50">
+                  <div
+                    className="flex items-center gap-4 p-4 rounded-xl border-2 border-amber-200 bg-amber-50 cursor-pointer hover:border-amber-300 transition-colors"
+                    onClick={() => setShowPatientDropdown(!showPatientDropdown)}
+                  >
                     <AlertCircle className="h-8 w-8 text-amber-600" />
                     <div className="flex-1">
                       <p className="font-medium text-amber-800">Could not match patient</p>
                       <p className="text-sm text-amber-700">Heard: "{parsedNote.patientName}"</p>
                     </div>
-                    <Button variant="outline" size="sm">Select Patient</Button>
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setShowPatientDropdown(!showPatientDropdown); }}>
+                      Select Patient
+                    </Button>
+                  </div>
+                )}
+
+                {/* Patient Dropdown */}
+                {showPatientDropdown && (
+                  <div className="absolute z-30 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
+                    <div className="p-3 border-b border-slate-100">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search patients..."
+                          value={patientSearchQuery}
+                          onChange={(e) => setPatientSearchQuery(e.target.value)}
+                          className="pl-9"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto py-2">
+                      {filteredPatients.map((patient) => (
+                        <button
+                          key={patient.id}
+                          onClick={() => handlePatientChange(patient)}
+                          className={cn(
+                            "w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center gap-3 transition-colors",
+                            parsedNote.patientMatch?.id === patient.id && "bg-blue-50"
+                          )}
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-medium">
+                            {patient.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900">{patient.name}</p>
+                            <p className="text-xs text-muted-foreground">DOB: {patient.dob} • {patient.activeCase}</p>
+                          </div>
+                          {parsedNote.patientMatch?.id === patient.id && (
+                            <Check className="h-4 w-4 text-blue-600" />
+                          )}
+                        </button>
+                      ))}
+                      {filteredPatients.length === 0 && (
+                        <p className="px-4 py-3 text-sm text-muted-foreground text-center">No patients found</p>
+                      )}
+                    </div>
+                    <div className="p-2 border-t border-slate-100">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-muted-foreground"
+                        onClick={() => setShowPatientDropdown(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Encounter Type & Case */}
+              {/* Encounter Type & Case Dropdowns */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
+                {/* Encounter Type Dropdown */}
+                <div className="relative">
                   <label className="text-sm font-medium text-slate-700 mb-2 block">Encounter Type</label>
-                  <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-white">
+                  <button
+                    onClick={() => setShowEncounterDropdown(!showEncounterDropdown)}
+                    className="w-full flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 transition-colors text-left"
+                  >
                     <ClipboardList className="h-4 w-4 text-slate-400" />
-                    <span className="font-medium">{parsedNote.encounterType}</span>
-                    <Button variant="ghost" size="sm" className="ml-auto h-6 px-2">
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </div>
+                    <span className="font-medium flex-1">{parsedNote.encounterType}</span>
+                    <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", showEncounterDropdown && "rotate-180")} />
+                  </button>
+
+                  {showEncounterDropdown && (
+                    <div className="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg py-1">
+                      {ENCOUNTER_TYPES.map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => handleEncounterTypeChange(type)}
+                          className={cn(
+                            "w-full px-4 py-2.5 text-left hover:bg-slate-50 flex items-center justify-between",
+                            parsedNote.encounterType === type && "bg-blue-50 text-blue-700"
+                          )}
+                        >
+                          <span>{type}</span>
+                          {parsedNote.encounterType === type && <Check className="h-4 w-4" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div>
+
+                {/* Case Dropdown */}
+                <div className="relative">
                   <label className="text-sm font-medium text-slate-700 mb-2 block">Case</label>
-                  <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-white">
+                  <button
+                    onClick={() => parsedNote.patientMatch && setShowCaseDropdown(!showCaseDropdown)}
+                    disabled={!parsedNote.patientMatch}
+                    className={cn(
+                      "w-full flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-white text-left transition-colors",
+                      parsedNote.patientMatch ? "hover:border-slate-300" : "opacity-50 cursor-not-allowed"
+                    )}
+                  >
                     <FolderOpen className="h-4 w-4 text-slate-400" />
-                    <span className="font-medium">{parsedNote.caseTitle}</span>
-                    <Button variant="ghost" size="sm" className="ml-auto h-6 px-2">
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </div>
+                    <span className="font-medium flex-1 truncate">{parsedNote.caseTitle}</span>
+                    <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", showCaseDropdown && "rotate-180")} />
+                  </button>
+
+                  {showCaseDropdown && availableCases.length > 0 && (
+                    <div className="absolute z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg py-1">
+                      {availableCases.map((caseTitle) => (
+                        <button
+                          key={caseTitle}
+                          onClick={() => handleCaseChange(caseTitle)}
+                          className={cn(
+                            "w-full px-4 py-2.5 text-left hover:bg-slate-50 flex items-center justify-between",
+                            parsedNote.caseTitle === caseTitle && "bg-blue-50 text-blue-700"
+                          )}
+                        >
+                          <span className="truncate">{caseTitle}</span>
+                          {parsedNote.caseTitle === caseTitle && <Check className="h-4 w-4 flex-shrink-0" />}
+                        </button>
+                      ))}
+                      <div className="border-t border-slate-100 mt-1 pt-1">
+                        <button className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50">
+                          + Create New Case
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Click outside to close dropdowns */}
+              {(showPatientDropdown || showEncounterDropdown || showCaseDropdown) && (
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => {
+                    setShowPatientDropdown(false);
+                    setShowEncounterDropdown(false);
+                    setShowCaseDropdown(false);
+                  }}
+                />
+              )}
 
               {/* SOAP Note */}
               <div className="mb-6">
@@ -658,11 +1022,15 @@ function AICaptureModal({
                 Cancel
               </Button>
               <div className="flex items-center gap-3">
-                <Button variant="outline">
+                <Button variant="outline" disabled={!parsedNote.patientMatch}>
                   <Edit3 className="h-4 w-4 mr-2" />
                   Edit in EMR
                 </Button>
-                <Button onClick={onPropagate} className="bg-emerald-600 hover:bg-emerald-700">
+                <Button
+                  onClick={onPropagate}
+                  disabled={!parsedNote.patientMatch || isRegenerating}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
                   <Check className="h-4 w-4 mr-2" />
                   Propagate to EMR
                 </Button>
