@@ -39,6 +39,8 @@ import {
 import NoviaLogo from "@/components/ui/NoviaLogo";
 import { cn } from "@/lib/utils";
 import { HumanBodyDiagram, PatientAnalytics } from "./HumanBodyDiagram";
+import Schedule from "@/pages/dashboard/Schedule";
+import Patients from "@/pages/dashboard/Patients";
 
 // PT Portal page types - top nav pages
 type PTPage = "dashboard" | "patients" | "schedule" | "emr" | "documents" | "admin" | "settings";
@@ -574,9 +576,9 @@ export default function PTDashboardLayout() {
           />
         );
       case "patients":
-        return <PTPatientsPlaceholder />;
+        return <Patients />;
       case "schedule":
-        return <PTSchedulePlaceholder />;
+        return <Schedule />;
       case "emr":
         return (
           <EMRView
@@ -2099,34 +2101,6 @@ function EMRContent({ patient, section, storedEncounters }: { patient: typeof MO
 // ============================================================================
 // PLACEHOLDER COMPONENTS
 // ============================================================================
-
-function PTPatientsPlaceholder() {
-  return (
-    <div className="flex-1 overflow-y-auto bg-slate-50 p-6">
-      <h1 className="font-heading text-2xl font-semibold text-slate-900 mb-4">
-        Patients
-      </h1>
-      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
-        <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-        <p className="text-muted-foreground">Patient management coming soon</p>
-      </div>
-    </div>
-  );
-}
-
-function PTSchedulePlaceholder() {
-  return (
-    <div className="flex-1 overflow-y-auto bg-slate-50 p-6">
-      <h1 className="font-heading text-2xl font-semibold text-slate-900 mb-4">
-        Schedule
-      </h1>
-      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
-        <Calendar className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-        <p className="text-muted-foreground">Scheduling coming soon</p>
-      </div>
-    </div>
-  );
-}
 
 function PTDocumentsPlaceholder() {
   return (
