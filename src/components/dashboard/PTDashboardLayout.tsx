@@ -573,6 +573,7 @@ export default function PTDashboardLayout() {
           <ClinicHubDashboard
             userName={session?.user?.name || "Clinician"}
             onStartAICapture={handleStartAICapture}
+            onNavigate={setCurrentPage}
           />
         );
       case "patients":
@@ -604,6 +605,7 @@ export default function PTDashboardLayout() {
           <ClinicHubDashboard
             userName={session?.user?.name || "Clinician"}
             onStartAICapture={handleStartAICapture}
+            onNavigate={setCurrentPage}
           />
         );
     }
@@ -1342,7 +1344,15 @@ function SOAPSection({
 // CLINIC HUB DASHBOARD - Based on first reference image
 // ============================================================================
 
-function ClinicHubDashboard({ userName, onStartAICapture }: { userName: string; onStartAICapture: () => void }) {
+function ClinicHubDashboard({
+  userName,
+  onStartAICapture,
+  onNavigate
+}: {
+  userName: string;
+  onStartAICapture: () => void;
+  onNavigate: (page: PTPage) => void;
+}) {
   return (
     <div className="flex-1 overflow-y-auto">
       {/* Hero Banner */}
@@ -1423,7 +1433,7 @@ function ClinicHubDashboard({ userName, onStartAICapture }: { userName: string; 
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => onNavigate("schedule")}>
                   <Calendar className="h-4 w-4 mr-2" />
                   View Schedule
                 </Button>
@@ -1497,19 +1507,35 @@ function ClinicHubDashboard({ userName, onStartAICapture }: { userName: string; 
         <div className="rounded-xl border border-slate-200 bg-white p-6">
           <h3 className="font-semibold text-slate-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="h-auto py-4 flex flex-col items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center justify-center gap-2"
+              onClick={() => onNavigate("patients")}
+            >
               <Users className="h-5 w-5 text-blue-600" />
-              <span className="text-sm">Add Patient</span>
+              <span className="text-sm">View Patients</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex flex-col items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center justify-center gap-2"
+              onClick={() => onNavigate("emr")}
+            >
               <FileText className="h-5 w-5 text-emerald-600" />
               <span className="text-sm">New Note</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex flex-col items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center justify-center gap-2"
+              onClick={() => onNavigate("schedule")}
+            >
               <Calendar className="h-5 w-5 text-purple-600" />
               <span className="text-sm">Schedule</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex flex-col items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              className="h-auto py-4 flex flex-col items-center justify-center gap-2"
+              onClick={() => onNavigate("emr")}
+            >
               <ClipboardList className="h-5 w-5 text-amber-600" />
               <span className="text-sm">Open EMR</span>
             </Button>
