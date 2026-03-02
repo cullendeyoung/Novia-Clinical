@@ -12,20 +12,33 @@ export const authClient = createClient(components.betterAuth);
 // Fallback URL for localhost development
 const fallbackSiteUrl = process.env.SITE_URL ?? "http://localhost:5173";
 
+// HIPAA: Explicitly allowed origins for CORS
+// Update ALLOWED_PRODUCTION_DOMAINS env var for production domains
+const ALLOWED_PRODUCTION_DOMAINS = (process.env.ALLOWED_PRODUCTION_DOMAINS || "").split(",").filter(Boolean);
+
 // Check if an origin matches allowed patterns
 function isAllowedOrigin(origin: string): boolean {
-  // Localhost (any port)
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+  // Check explicit production domains first
+  if (ALLOWED_PRODUCTION_DOMAINS.includes(origin)) {
     return true;
   }
-  // WebContainers (dev environments)
-  if (origin.endsWith(".local-corp.webcontainer-api.io")) {
+
+  // Localhost (any port) - development only
+  if (process.env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return true;
   }
-  // Vercel deployments (previews + production)
-  if (origin.endsWith(".vercel.app")) {
+
+  // WebContainers (dev environments) - development only
+  if (process.env.NODE_ENV !== "production" && origin.endsWith(".local-corp.webcontainer-api.io")) {
     return true;
   }
+
+  // HIPAA: Vercel deployments restricted to specific project patterns
+  // Only allow the specific project's Vercel domains, not all *.vercel.app
+  if (origin.match(/^https:\/\/specode-novia(-[a-z0-9]+)?\.vercel\.app$/)) {
+    return true;
+  }
+
   return false;
 }
 
@@ -83,7 +96,7 @@ export function createAuth(ctx: GenericCtx<GenericDataModel>, request?: Request)
     },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: false,
+      requireEmailVerification: true, // HIPAA: Email verification required to prevent account impersonation
       minPasswordLength: 8,
     },
     plugins: [

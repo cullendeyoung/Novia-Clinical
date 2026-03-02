@@ -402,6 +402,7 @@ export async function verifyUserInOrg(
 
 /**
  * Log an audit event for HIPAA compliance
+ * Includes optional IP address and User-Agent for access tracking
  */
 export async function logAuditEvent(
   ctx: MutationCtx,
@@ -410,7 +411,8 @@ export async function logAuditEvent(
   action: string,
   entityType: string,
   entityId?: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
+  requestContext?: { ipAddress?: string; userAgent?: string }
 ): Promise<void> {
   await ctx.db.insert("orgAuditLogs", {
     orgId,
@@ -420,6 +422,8 @@ export async function logAuditEvent(
     entityType,
     entityId,
     metadataJson: metadata ? JSON.stringify(metadata) : undefined,
+    ipAddress: requestContext?.ipAddress,
+    userAgent: requestContext?.userAgent,
     createdAt: Date.now(),
   });
 }

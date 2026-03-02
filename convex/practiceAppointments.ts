@@ -1,5 +1,12 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import {
+  verifyPracticeAccess,
+  requirePracticeAuth,
+  requirePracticePermission,
+  verifyAppointmentInPractice,
+  verifyPracticeUserInPractice,
+} from "./practiceAuthz";
 
 const appointmentTypeValidator = v.union(
   v.literal("initial_evaluation"),
@@ -55,6 +62,10 @@ export const listByPractice = query({
     })
   ),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and belongs to this practice
+    const auth = await verifyPracticeAccess(ctx, args.practiceId);
+    requirePracticePermission(auth, "appointment", "read");
+
     let appointments = await ctx.db
       .query("practiceAppointments")
       .withIndex("by_practiceId_and_scheduledStart", (q) =>
@@ -150,6 +161,11 @@ export const listByClinician = query({
     })
   ),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and clinician belongs to same practice
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "appointment", "read");
+    await verifyPracticeUserInPractice(ctx, auth, args.clinicianId);
+
     let appointments = await ctx.db
       .query("practiceAppointments")
       .withIndex("by_clinicianId_and_scheduledStart", (q) =>
@@ -223,6 +239,16 @@ export const listByPatient = query({
     })
   ),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "appointment", "read");
+
+    // Verify patient belongs to user's practice
+    const patient = await ctx.db.get(args.patientId);
+    if (!patient || patient.practiceId !== auth.practiceId) {
+      throw new Error("Access denied: Patient belongs to another practice");
+    }
+
     const now = Date.now();
 
     let appointments = await ctx.db
@@ -287,6 +313,11 @@ export const getTodayForClinician = query({
     })
   ),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and clinician belongs to same practice
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "appointment", "read");
+    await verifyPracticeUserInPractice(ctx, auth, args.clinicianId);
+
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
@@ -339,10 +370,13 @@ export const create = mutation({
     appointmentType: appointmentTypeValidator,
     title: v.optional(v.string()),
     notes: v.optional(v.string()),
-    createdByUserId: v.id("practiceUsers"),
   },
   returns: v.id("practiceAppointments"),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and belongs to this practice
+    const auth = await verifyPracticeAccess(ctx, args.practiceId);
+    requirePracticePermission(auth, "appointment", "create");
+
     const now = Date.now();
     const scheduledEnd = args.scheduledStart + args.durationMinutes * 60 * 1000;
 
@@ -358,7 +392,7 @@ export const create = mutation({
       title: args.title,
       notes: args.notes,
       status: "scheduled",
-      createdByUserId: args.createdByUserId,
+      createdByUserId: auth.userId, // Use authenticated user's ID
       createdAt: now,
       updatedAt: now,
       isDeleted: false,
@@ -382,9 +416,18 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and has permission
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "appointment", "update");
+
     const appointment = await ctx.db.get(args.appointmentId);
     if (!appointment || appointment.isDeleted) {
       throw new Error("Appointment not found");
+    }
+
+    // HIPAA: Verify appointment belongs to user's practice
+    if (appointment.practiceId !== auth.practiceId) {
+      throw new Error("Access denied: Appointment belongs to another practice");
     }
 
     const updates: Record<string, unknown> = {
@@ -420,9 +463,18 @@ export const updateStatus = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and has permission
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "appointment", "update");
+
     const appointment = await ctx.db.get(args.appointmentId);
     if (!appointment || appointment.isDeleted) {
       throw new Error("Appointment not found");
+    }
+
+    // HIPAA: Verify appointment belongs to user's practice
+    if (appointment.practiceId !== auth.practiceId) {
+      throw new Error("Access denied: Appointment belongs to another practice");
     }
 
     await ctx.db.patch(args.appointmentId, {
@@ -438,21 +490,29 @@ export const updateStatus = mutation({
 export const cancel = mutation({
   args: {
     appointmentId: v.id("practiceAppointments"),
-    cancelledByUserId: v.optional(v.id("practiceUsers")),
     cancelledByPatient: v.optional(v.boolean()),
     cancellationReason: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and has permission
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "appointment", "update");
+
     const appointment = await ctx.db.get(args.appointmentId);
     if (!appointment || appointment.isDeleted) {
       throw new Error("Appointment not found");
     }
 
+    // HIPAA: Verify appointment belongs to user's practice
+    if (appointment.practiceId !== auth.practiceId) {
+      throw new Error("Access denied: Appointment belongs to another practice");
+    }
+
     await ctx.db.patch(args.appointmentId, {
       status: "cancelled",
       cancelledAt: Date.now(),
-      cancelledByUserId: args.cancelledByUserId,
+      cancelledByUserId: auth.userId, // Use authenticated user's ID
       cancelledByPatient: args.cancelledByPatient,
       cancellationReason: args.cancellationReason,
       updatedAt: Date.now(),
@@ -469,9 +529,18 @@ export const remove = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and has delete permission
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "appointment", "delete");
+
     const appointment = await ctx.db.get(args.appointmentId);
     if (!appointment) {
       throw new Error("Appointment not found");
+    }
+
+    // HIPAA: Verify appointment belongs to user's practice
+    if (appointment.practiceId !== auth.practiceId) {
+      throw new Error("Access denied: Appointment belongs to another practice");
     }
 
     await ctx.db.patch(args.appointmentId, {
@@ -513,6 +582,11 @@ export const getClinicianAvailability = query({
     ),
   }),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and clinician belongs to same practice
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "availability", "read");
+    await verifyPracticeUserInPractice(ctx, auth, args.clinicianId);
+
     const date = new Date(args.date);
     const dayOfWeek = date.getDay();
 
@@ -604,6 +678,10 @@ export const setWorkingHours = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and belongs to this practice
+    const auth = await verifyPracticeAccess(ctx, args.practiceId);
+    requirePracticePermission(auth, "availability", "update");
+
     const now = Date.now();
 
     // Delete existing working hours for this clinician
@@ -649,6 +727,10 @@ export const blockTime = mutation({
   },
   returns: v.id("clinicianAvailability"),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and belongs to this practice
+    const auth = await verifyPracticeAccess(ctx, args.practiceId);
+    requirePracticePermission(auth, "availability", "create");
+
     const now = Date.now();
 
     const entryId = await ctx.db.insert("clinicianAvailability", {

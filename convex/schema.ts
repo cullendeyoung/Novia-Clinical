@@ -882,6 +882,23 @@ export default defineSchema({
     .index("by_practiceId_and_createdAt", ["practiceId", "createdAt"]),
 
   // =============================================================================
+  // SECURITY TABLES
+  // =============================================================================
+
+  // Rate Limiting - Tracks request rates for brute force protection
+  rateLimitTracking: defineTable({
+    key: v.string(), // e.g., "auth:email@example.com" or "auth:192.168.1.1"
+    windowStart: v.number(), // Timestamp when window started
+    requestCount: v.number(), // Number of requests in current window
+    isBlocked: v.boolean(), // Whether this key is currently blocked
+    blockedUntil: v.optional(v.number()), // Timestamp when block expires
+    lastRequestAt: v.number(), // Last request timestamp
+  })
+    .index("by_key", ["key"])
+    .index("by_windowStart", ["windowStart"])
+    .index("by_blockedUntil", ["blockedUntil"]),
+
+  // =============================================================================
   // LEGACY TABLES (Kept for backward compatibility - will be deprecated)
   // =============================================================================
 

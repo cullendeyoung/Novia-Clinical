@@ -522,7 +522,7 @@ export const startSession = mutation({
 
     // Check for existing active session
     if (user.activeSessionId && user.activeSessionId !== args.sessionId) {
-      const sessionTimeout = 30 * 60 * 1000; // 30 minutes
+      const sessionTimeout = 15 * 60 * 1000; // 15 minutes - HIPAA compliant
       const lastActive = user.lastActiveAt || user.activeSessionStartedAt || 0;
 
       if (timestamp - lastActive < sessionTimeout) {
