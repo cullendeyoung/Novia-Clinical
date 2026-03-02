@@ -22,14 +22,4 @@ crons.interval(
   {}
 );
 
-// Verify audit log retention compliance weekly
-// This is a read-only check to ensure we're maintaining proper retention
-// Runs every 7 days
-crons.interval(
-  "verify_audit_retention",
-  { hours: 168 }, // 7 days
-  internal.auditMaintenance.verifyRetention,
-  {}
-);
-
 export default crons;
