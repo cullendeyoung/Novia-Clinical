@@ -1068,4 +1068,218 @@ export default defineSchema({
   })
     .index("by_clinicianId", ["clinicianId"])
     .index("by_practiceId", ["practiceId"]),
+
+  // =============================================================================
+  // CUSTOM METRIC ANALYZER (CMA) MODULE
+  // HIPAA-compliant prompt-driven analytics system for clinical metrics
+  // =============================================================================
+
+  // Clinical Metrics - Structured clinical measurements
+  // Stores individual measurements extracted from encounters or entered manually
+  clinicalMetrics: defineTable({
+    practiceId: v.id("clinicPractices"),
+    patientId: v.id("practicePatients"),
+    encounterId: v.optional(v.id("practiceEncounters")),
+    caseId: v.optional(v.id("practiceCases")),
+    clinicianId: v.id("practiceUsers"),
+
+    // Metric identification
+    metricType: v.string(), // "rom", "strength", "pain", "functional", "balance", "gait", "custom"
+    metricName: v.string(), // "hip_internal_rotation", "quad_strength", "vas_pain", etc.
+    bodyRegion: v.optional(v.string()), // "hip", "knee", "shoulder", etc.
+    side: v.optional(v.union(v.literal("L"), v.literal("R"), v.literal("Bilateral"), v.literal("NA"))),
+
+    // Measurement values
+    numericValue: v.optional(v.number()), // For numeric measurements
+    unit: v.optional(v.string()), // "degrees", "lbs", "0-10", "seconds", etc.
+    textValue: v.optional(v.string()), // For qualitative measurements
+    normalRangeMin: v.optional(v.number()), // Reference range
+    normalRangeMax: v.optional(v.number()),
+
+    // Context
+    measurementDate: v.number(), // Timestamp of measurement
+    measurementContext: v.optional(v.string()), // "baseline", "post_treatment", "discharge", etc.
+    notes: v.optional(v.string()),
+
+    // Source tracking
+    sourceType: v.union(
+      v.literal("encounter_extracted"), // AI-extracted from encounter text
+      v.literal("manual_entry"), // Clinician entered directly
+      v.literal("verbal_dictation"), // From speech-to-text
+      v.literal("imported") // From external source
+    ),
+    sourceText: v.optional(v.string()), // Original text if extracted
+    confidenceScore: v.optional(v.number()), // AI extraction confidence (0-1)
+    verifiedByClinician: v.boolean(), // Clinician reviewed/confirmed
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_patientId", ["patientId"])
+    .index("by_encounterId", ["encounterId"])
+    .index("by_caseId", ["caseId"])
+    .index("by_clinicianId", ["clinicianId"])
+    .index("by_metricType", ["metricType"])
+    .index("by_metricName", ["metricName"])
+    .index("by_patientId_and_metricType", ["patientId", "metricType"])
+    .index("by_patientId_and_measurementDate", ["patientId", "measurementDate"])
+    .index("by_practiceId_and_metricType", ["practiceId", "metricType"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // CMA Analytics - Saved prompt-based analytics objects
+  // Stores analytics that auto-update with new data
+  cmaAnalytics: defineTable({
+    practiceId: v.id("clinicPractices"),
+    patientId: v.optional(v.id("practicePatients")), // null for clinic-level
+    caseId: v.optional(v.id("practiceCases")),
+    createdByUserId: v.id("practiceUsers"),
+
+    // Analytics identification
+    name: v.string(), // User-provided name for this analysis
+    analysisType: v.union(
+      v.literal("patient"), // Individual patient analysis
+      v.literal("clinic"), // Clinic-wide aggregated
+      v.literal("cohort") // Specific patient cohort
+    ),
+
+    // Original prompt & interpretation
+    originalPrompt: v.string(), // User's natural language request
+    interpretedQuery: v.string(), // JSON: AI's interpretation of the query
+
+    // Data dependencies (for auto-update)
+    dataDependencies: v.string(), // JSON: { metricTypes, dateRange, patientIds, etc. }
+    lastDataVersion: v.number(), // Timestamp of last data used
+
+    // Graph configuration
+    graphType: v.string(), // "line", "bar", "scatter", "comparison", "multi_axis"
+    graphConfig: v.string(), // JSON: axes, colors, labels, etc.
+
+    // Computed results (cached)
+    resultData: v.string(), // JSON: The actual data points for rendering
+    resultSummary: v.optional(v.string()), // Text summary of findings
+
+    // AI insights
+    insightsJson: v.optional(v.string()), // JSON: AI-generated insights
+    insightsGeneratedAt: v.optional(v.number()),
+
+    // Status
+    status: v.union(
+      v.literal("draft"), // Being created
+      v.literal("active"), // Saved and auto-updating
+      v.literal("archived"), // No longer auto-updating
+      v.literal("error") // Failed to compute
+    ),
+    errorMessage: v.optional(v.string()),
+
+    // Review tracking
+    reviewedByClinician: v.boolean(),
+    reviewedAt: v.optional(v.number()),
+    reviewedByUserId: v.optional(v.id("practiceUsers")),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    isDeleted: v.boolean(),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_patientId", ["patientId"])
+    .index("by_caseId", ["caseId"])
+    .index("by_createdByUserId", ["createdByUserId"])
+    .index("by_analysisType", ["analysisType"])
+    .index("by_status", ["status"])
+    .index("by_practiceId_and_analysisType", ["practiceId", "analysisType"])
+    .index("by_patientId_and_status", ["patientId", "status"])
+    .index("by_isDeleted", ["isDeleted"]),
+
+  // CMA Prompt Logs - HIPAA-compliant audit trail for AI interactions
+  cmaPromptLogs: defineTable({
+    practiceId: v.id("clinicPractices"),
+    userId: v.id("practiceUsers"),
+    analyticsId: v.optional(v.id("cmaAnalytics")),
+    patientId: v.optional(v.id("practicePatients")),
+
+    // Request
+    promptText: v.string(),
+    promptTimestamp: v.number(),
+
+    // AI Processing
+    aiModel: v.string(), // "gpt-4", "gpt-4o", etc.
+    aiRequestId: v.optional(v.string()), // OpenAI request ID
+    tokensUsed: v.optional(v.number()),
+    processingTimeMs: v.optional(v.number()),
+
+    // Response
+    interpretedQuery: v.optional(v.string()),
+    responseType: v.string(), // "success", "clarification_needed", "error"
+    errorDetails: v.optional(v.string()),
+
+    // Data access tracking (HIPAA)
+    dataFieldsAccessed: v.optional(v.string()), // JSON array of accessed fields
+    patientIdsAccessed: v.optional(v.string()), // JSON array (for clinic-level)
+
+    createdAt: v.number(),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_userId", ["userId"])
+    .index("by_analyticsId", ["analyticsId"])
+    .index("by_patientId", ["patientId"])
+    .index("by_promptTimestamp", ["promptTimestamp"])
+    .index("by_practiceId_and_createdAt", ["practiceId", "createdAt"]),
+
+  // CMA Insight Sources - Traceability for AI-generated insights
+  cmaInsightSources: defineTable({
+    practiceId: v.id("clinicPractices"),
+    analyticsId: v.id("cmaAnalytics"),
+
+    // Insight reference
+    insightIndex: v.number(), // Which insight in the insightsJson array
+    insightText: v.string(), // The insight statement
+
+    // Source documentation
+    sourceType: v.string(), // "encounter", "metric", "appointment"
+    sourceId: v.string(), // ID of the source record
+    sourceDate: v.number(),
+    sourceExcerpt: v.optional(v.string()), // Relevant text excerpt
+
+    createdAt: v.number(),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_analyticsId", ["analyticsId"])
+    .index("by_sourceType_and_sourceId", ["sourceType", "sourceId"]),
+
+  // CMA Metric Definitions - Standard metric templates for consistency
+  cmaMetricDefinitions: defineTable({
+    practiceId: v.optional(v.id("clinicPractices")), // null for system-wide
+    createdByUserId: v.optional(v.id("practiceUsers")),
+
+    // Metric definition
+    metricType: v.string(), // "rom", "strength", "pain", etc.
+    metricName: v.string(), // "hip_internal_rotation"
+    displayName: v.string(), // "Hip Internal Rotation"
+    description: v.optional(v.string()),
+    category: v.optional(v.string()), // "lower_extremity", "upper_extremity", etc.
+
+    // Measurement settings
+    unit: v.string(), // "degrees", "lbs", "0-10"
+    normalRangeMin: v.optional(v.number()),
+    normalRangeMax: v.optional(v.number()),
+    minValue: v.optional(v.number()), // Validation bounds
+    maxValue: v.optional(v.number()),
+
+    // Display settings
+    higherIsBetter: v.boolean(), // For progress interpretation
+    colorScheme: v.optional(v.string()), // JSON color mapping
+
+    isSystemDefinition: v.boolean(), // Built-in vs custom
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_practiceId", ["practiceId"])
+    .index("by_metricType", ["metricType"])
+    .index("by_metricName", ["metricName"])
+    .index("by_isSystemDefinition", ["isSystemDefinition"]),
 });
