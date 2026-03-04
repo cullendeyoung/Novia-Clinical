@@ -8,7 +8,6 @@
 import { v } from "convex/values";
 import { action, internalAction } from "./_generated/server";
 import { internal, api } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
 
 // =============================================================================
 // TYPES
@@ -50,7 +49,7 @@ interface GraphConfig {
   showGrid: boolean;
 }
 
-interface Insight {
+interface _Insight {
   type: "plateau" | "improvement" | "correlation" | "change" | "warning";
   text: string;
   confidence: number;
@@ -62,6 +61,8 @@ interface Insight {
     excerpt?: string;
   }>;
 }
+// Exported for type reference only
+export type Insight = _Insight;
 
 // =============================================================================
 // PROMPT INTERPRETATION
@@ -340,10 +341,9 @@ export const generateGraphData = action({
       };
 
       // Transform data for charting
-      const chartData: Array<Record<string, unknown>> = [];
       const dateMap = new Map<number, Record<string, unknown>>();
 
-      for (const [metricType, dataPoints] of Object.entries(metricsData)) {
+      for (const dataPoints of Object.values(metricsData)) {
         for (const point of dataPoints) {
           const dateKey = Math.floor(point.date / (24 * 60 * 60 * 1000)); // Day precision
           if (!dateMap.has(dateKey)) {
@@ -419,7 +419,7 @@ export const generateInsights = action({
     insightsJson: v.optional(v.string()),
     error: v.optional(v.string()),
   }),
-  handler: async (ctx, args): Promise<{
+  handler: async (_ctx, args): Promise<{
     success: boolean;
     insightsJson?: string;
     error?: string;
@@ -558,7 +558,7 @@ export const extractMetricsFromEncounter = action({
     ),
     error: v.optional(v.string()),
   }),
-  handler: async (ctx, args): Promise<{
+  handler: async (_ctx, args): Promise<{
     success: boolean;
     metrics?: Array<{
       metricType: string;
@@ -636,7 +636,8 @@ export const refreshAnalytics = internalAction({
     updated: v.boolean(),
     error: v.optional(v.string()),
   }),
-  handler: async (ctx, args): Promise<{
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  handler: async (_ctx, _args): Promise<{
     success: boolean;
     updated: boolean;
     error?: string;

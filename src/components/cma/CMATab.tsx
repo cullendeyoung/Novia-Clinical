@@ -6,23 +6,20 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { CMAPromptInput } from "./CMAPromptInput";
-import { CMAChart, GraphConfig } from "./CMAChart";
-import { CMAInsights, Insight } from "./CMAInsights";
-import { CMASavedAnalytics, SavedAnalytic } from "./CMASavedAnalytics";
+import { CMAChart, type GraphConfig } from "./CMAChart";
+import { CMAInsights, type Insight } from "./CMAInsights";
+import { CMASavedAnalytics, type SavedAnalytic } from "./CMASavedAnalytics";
 import {
   Sparkles,
   Loader2,
   AlertCircle,
   Save,
   RotateCcw,
-  Download,
-  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 
 interface CMATabProps {
   practiceUserId: Id<"practiceUsers">;
@@ -70,7 +67,6 @@ export function CMATab({ practiceUserId, patientId, patientName }: CMATabProps) 
   // Convex mutations/actions
   const saveAnalytics = useMutation(api.cma.saveAnalytics);
   const archiveAnalytics = useMutation(api.cma.archiveAnalytics);
-  const markReviewed = useMutation(api.cma.markAnalyticsReviewed);
   const interpretPrompt = useAction(api.cmaActions.interpretPrompt);
   const generateGraphData = useAction(api.cmaActions.generateGraphData);
   const generateInsights = useAction(api.cmaActions.generateInsights);
@@ -103,7 +99,7 @@ export function CMATab({ practiceUserId, patientId, patientName }: CMATabProps) 
           setAnalysisState((prev) => ({
             ...prev,
             isLoading: false,
-            clarificationNeeded: interpretResult.clarificationNeeded,
+            clarificationNeeded: interpretResult.clarificationNeeded ?? null,
           }));
           return;
         }

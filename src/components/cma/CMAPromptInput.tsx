@@ -3,7 +3,7 @@
  * Natural language input for clinical metrics analysis
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Sparkles, Send, Loader2, Mic, MicOff, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

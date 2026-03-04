@@ -12,9 +12,6 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  MoreHorizontal,
-  Trash2,
-  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

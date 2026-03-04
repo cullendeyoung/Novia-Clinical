@@ -5,7 +5,7 @@
 
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 
 // =============================================================================
 // VALIDATORS
@@ -130,7 +130,7 @@ export const getPatientMetrics = query({
       throw new Error("Access denied to patient data");
     }
 
-    let metricsQuery = ctx.db
+    const metricsQuery = ctx.db
       .query("clinicalMetrics")
       .withIndex("by_patientId", (q) => q.eq("patientId", args.patientId));
 
@@ -698,7 +698,7 @@ export const getClinicAnalytics = query({
     })
   ),
   handler: async (ctx, args) => {
-    const { practiceId, role } = await requirePracticeAccess(
+    const { practiceId } = await requirePracticeAccess(
       ctx,
       args.practiceUserId,
       ["practice_admin"]
@@ -886,7 +886,7 @@ export const archiveAnalytics = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { practiceId, role } = await requirePracticeAccess(
+    const { practiceId } = await requirePracticeAccess(
       ctx,
       args.practiceUserId,
       ["practice_admin", "clinician"]
@@ -984,7 +984,7 @@ export const getPromptHistory = query({
     })
   ),
   handler: async (ctx, args) => {
-    const { practiceId, role } = await requirePracticeAccess(
+    const { practiceId } = await requirePracticeAccess(
       ctx,
       args.practiceUserId,
       ["practice_admin"]

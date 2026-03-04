@@ -56,13 +56,6 @@ const CHART_COLORS = [
   "#06b6d4", // cyan
 ];
 
-function formatXAxisTick(value: unknown, type: "date" | "category" | "number"): string {
-  if (type === "date" && typeof value === "number") {
-    return format(new Date(value), "MMM d");
-  }
-  return String(value);
-}
-
 function formatTooltipValue(
   value: unknown,
   unit: string
@@ -112,17 +105,17 @@ export function CMAChart({ config, data, className }: CMAChartProps) {
                 borderRadius: "8px",
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
               }}
-              formatter={(value, name) => {
+              formatter={(value: unknown, name: string | undefined) => {
                 const yAxis = config.yAxes.find(
                   (y) => y.field === name || y.label === name
                 );
-                return [formatTooltipValue(value, yAxis?.unit || ""), yAxis?.label || name];
+                return [formatTooltipValue(value, yAxis?.unit || ""), yAxis?.label || name || ""];
               }}
             />
             {config.showLegend && (
               <Legend
                 wrapperStyle={{ paddingTop: "16px" }}
-                formatter={(value) => {
+                formatter={(value: string) => {
                   const yAxis = config.yAxes.find((y) => y.field === value);
                   return <span className="text-sm text-slate-600">{yAxis?.label || value}</span>;
                 }}
@@ -168,11 +161,11 @@ export function CMAChart({ config, data, className }: CMAChartProps) {
                 borderRadius: "8px",
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
               }}
-              formatter={(value, name) => {
+              formatter={(value: unknown, name: string | undefined) => {
                 const yAxis = config.yAxes.find(
                   (y) => y.field === name || y.label === name
                 );
-                return [formatTooltipValue(value, yAxis?.unit || ""), yAxis?.label || name];
+                return [formatTooltipValue(value, yAxis?.unit || ""), yAxis?.label || name || ""];
               }}
             />
             {config.showLegend && <Legend wrapperStyle={{ paddingTop: "16px" }} />}
@@ -262,11 +255,11 @@ export function CMAChart({ config, data, className }: CMAChartProps) {
                 borderRadius: "8px",
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
               }}
-              formatter={(value, name) => {
+              formatter={(value: unknown, name: string | undefined) => {
                 const yAxis = config.yAxes.find(
                   (y) => y.field === name || y.label === name
                 );
-                return [formatTooltipValue(value, yAxis?.unit || ""), yAxis?.label || name];
+                return [formatTooltipValue(value, yAxis?.unit || ""), yAxis?.label || name || ""];
               }}
             />
             {config.showLegend && <Legend wrapperStyle={{ paddingTop: "16px" }} />}
