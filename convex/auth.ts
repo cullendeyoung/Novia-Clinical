@@ -109,27 +109,29 @@ export function createAuth(ctx: GenericCtx<GenericDataModel>, request?: Request)
       requireEmailVerification: true, // HIPAA: Email verification required to prevent account impersonation
       minPasswordLength: 8,
       async sendVerificationEmail({ user, url }: { user: { email: string }; url: string }) {
-        void sendEmail({
-          to: user.email,
-          subject: "Verify your email",
-          html: `
-            <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; padding: 20px;">
-              <h2 style="color: #0f172a; margin-bottom: 12px;">Verify your email</h2>
-              <p style="color: #475569; margin-bottom: 16px;">
-                Click the button below to verify your email address:
-              </p>
-              <a href="${url}" style="display: inline-block; background: #0f172a; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-                Verify Email
-              </a>
-              <p style="color: #64748b; margin-top: 16px; font-size: 14px;">
-                If you didn't create an account, you can ignore this email.
-              </p>
-            </div>
-          `,
-          debugLabel: "EMAIL VERIFICATION",
-        }).catch((err) => {
+        try {
+          await sendEmail({
+            to: user.email,
+            subject: "Verify your email",
+            html: `
+              <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #0f172a; margin-bottom: 12px;">Verify your email</h2>
+                <p style="color: #475569; margin-bottom: 16px;">
+                  Click the button below to verify your email address:
+                </p>
+                <a href="${url}" style="display: inline-block; background: #0f172a; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+                  Verify Email
+                </a>
+                <p style="color: #64748b; margin-top: 16px; font-size: 14px;">
+                  If you didn't create an account, you can ignore this email.
+                </p>
+              </div>
+            `,
+            debugLabel: "EMAIL VERIFICATION",
+          });
+        } catch (err) {
           console.error("Failed to send verification email", err);
-        });
+        }
       },
     },
     plugins: [
@@ -149,28 +151,30 @@ export function createAuth(ctx: GenericCtx<GenericDataModel>, request?: Request)
               ? "Verify your email"
               : "Reset your password";
 
-          void sendEmail({
-            to: email,
-            subject,
-            html: `
-              <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #0f172a; margin-bottom: 12px;">${title}</h2>
-                <p style="color: #475569; margin-bottom: 16px;">
-                  Your verification code is:
-                </p>
-                <div style="display: inline-block; font-size: 28px; letter-spacing: 6px; font-weight: 700; color: #0f172a; padding: 10px 16px; border-radius: 10px; background: #f1f5f9;">
-                  ${otp}
+          try {
+            await sendEmail({
+              to: email,
+              subject,
+              html: `
+                <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #0f172a; margin-bottom: 12px;">${title}</h2>
+                  <p style="color: #475569; margin-bottom: 16px;">
+                    Your verification code is:
+                  </p>
+                  <div style="display: inline-block; font-size: 28px; letter-spacing: 6px; font-weight: 700; color: #0f172a; padding: 10px 16px; border-radius: 10px; background: #f1f5f9;">
+                    ${otp}
+                  </div>
+                  <p style="color: #64748b; margin-top: 16px; font-size: 14px;">
+                    This code expires in 5 minutes. If you didn't request this, you can ignore this email.
+                  </p>
                 </div>
-                <p style="color: #64748b; margin-top: 16px; font-size: 14px;">
-                  This code expires in 5 minutes. If you didn't request this, you can ignore this email.
-                </p>
-              </div>
-            `,
-            debugCode: otp,
-            debugLabel: title.toUpperCase(),
-          }).catch((err) => {
+              `,
+              debugCode: otp,
+              debugLabel: title.toUpperCase(),
+            });
+          } catch (err) {
             console.error("Failed to send OTP email", err);
-          });
+          }
         },
       }),
       convex({ authConfig }),
