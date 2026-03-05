@@ -12,20 +12,43 @@ export const authClient = createClient(components.betterAuth);
 // Fallback URL for localhost development
 const fallbackSiteUrl = process.env.SITE_URL ?? "http://localhost:5173";
 
+// HIPAA: Explicitly allowed origins for CORS
+// Update ALLOWED_PRODUCTION_DOMAINS env var for production domains
+const ALLOWED_PRODUCTION_DOMAINS = (process.env.ALLOWED_PRODUCTION_DOMAINS || "").split(",").filter(Boolean);
+
 // Check if an origin matches allowed patterns
 function isAllowedOrigin(origin: string): boolean {
-  // Localhost (any port)
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+  // Check explicit production domains first
+  if (ALLOWED_PRODUCTION_DOMAINS.includes(origin)) {
     return true;
   }
-  // WebContainers (dev environments)
-  if (origin.endsWith(".local-corp.webcontainer-api.io")) {
+
+  // Convex site URL (for auth callbacks)
+  if (origin === "https://first-octopus-309.convex.site") {
     return true;
   }
-  // Vercel deployments (previews + production)
-  if (origin.endsWith(".vercel.app")) {
+
+  // Production domain
+  if (origin === "https://app.noviaclinical.com") {
     return true;
   }
+
+  // Localhost (any port) - development only
+  if (process.env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    return true;
+  }
+
+  // WebContainers (dev environments) - development only
+  if (process.env.NODE_ENV !== "production" && origin.endsWith(".local-corp.webcontainer-api.io")) {
+    return true;
+  }
+
+  // HIPAA: Vercel deployments restricted to specific project patterns
+  // Only allow the specific project's Vercel domains, not all *.vercel.app
+  if (origin.match(/^https:\/\/specode-novia(-[a-z0-9]+)?\.vercel\.app$/)) {
+    return true;
+  }
+
   return false;
 }
 
@@ -83,8 +106,31 @@ export function createAuth(ctx: GenericCtx<GenericDataModel>, request?: Request)
     },
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: false,
+      requireEmailVerification: true, // HIPAA: Email verification required to prevent account impersonation
       minPasswordLength: 8,
+      async sendVerificationEmail({ user, url }) {
+        void sendEmail({
+          to: user.email,
+          subject: "Verify your email",
+          html: `
+            <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #0f172a; margin-bottom: 12px;">Verify your email</h2>
+              <p style="color: #475569; margin-bottom: 16px;">
+                Click the button below to verify your email address:
+              </p>
+              <a href="${url}" style="display: inline-block; background: #0f172a; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+                Verify Email
+              </a>
+              <p style="color: #64748b; margin-top: 16px; font-size: 14px;">
+                If you didn't create an account, you can ignore this email.
+              </p>
+            </div>
+          `,
+          debugLabel: "EMAIL VERIFICATION",
+        }).catch((err) => {
+          console.error("Failed to send verification email", err);
+        });
+      },
     },
     plugins: [
       emailOTP({

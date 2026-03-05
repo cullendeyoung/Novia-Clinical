@@ -141,8 +141,8 @@ export const startSession = mutation({
     // Check if there's an existing active session
     if (clinician.activeSessionId && clinician.activeSessionId !== args.sessionId) {
       // Session exists from another device/browser
-      // Check if it's stale (no activity for 30 minutes)
-      const sessionTimeout = 30 * 60 * 1000; // 30 minutes
+      // Check if it's stale (no activity for 15 minutes - HIPAA compliant)
+      const sessionTimeout = 15 * 60 * 1000; // 15 minutes - HIPAA compliant
       const lastActive = clinician.lastActiveAt || clinician.activeSessionStartedAt || 0;
 
       if (now - lastActive < sessionTimeout) {

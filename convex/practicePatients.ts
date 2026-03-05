@@ -1,6 +1,12 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import {
+  verifyPracticeAccess,
+  requirePracticeAuth,
+  requirePracticePermission,
+  verifyPatientInPractice,
+} from "./practiceAuthz";
 
 const patientStatusValidator = v.union(
   v.literal("active"),
@@ -46,6 +52,10 @@ export const listByPractice = query({
     })
   ),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and belongs to this practice
+    const auth = await verifyPracticeAccess(ctx, args.practiceId);
+    requirePracticePermission(auth, "patient", "read");
+
     let patients = await ctx.db
       .query("practicePatients")
       .withIndex("by_practiceId", (q) => q.eq("practiceId", args.practiceId))
@@ -169,6 +179,10 @@ export const listCurrentPatients = query({
     })
   ),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and belongs to this practice
+    const auth = await verifyPracticeAccess(ctx, args.practiceId);
+    requirePracticePermission(auth, "patient", "read");
+
     // Get active patients only
     const patients = await ctx.db
       .query("practicePatients")
@@ -300,8 +314,17 @@ export const getById = query({
     v.null()
   ),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "patient", "read");
+
     const patient = await ctx.db.get(args.patientId);
     if (!patient || patient.isDeleted) return null;
+
+    // HIPAA: Verify patient belongs to user's practice
+    if (patient.practiceId !== auth.practiceId) {
+      throw new Error("Access denied: Patient belongs to another practice");
+    }
 
     return {
       _id: patient._id,
@@ -372,17 +395,20 @@ export const create = mutation({
     referringPhysicianName: v.optional(v.string()),
     notes: v.optional(v.string()),
     assignedClinicianId: v.optional(v.id("practiceUsers")),
-    createdByUserId: v.id("practiceUsers"),
   },
   returns: v.id("practicePatients"),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and belongs to this practice
+    const auth = await verifyPracticeAccess(ctx, args.practiceId);
+    requirePracticePermission(auth, "patient", "create");
+
     const now = Date.now();
-    const { createdByUserId, ...patientData } = args;
+    const patientData = args;
 
     const patientId = await ctx.db.insert("practicePatients", {
       ...patientData,
       status: "active",
-      createdByUserId,
+      createdByUserId: auth.userId, // Use authenticated user's ID
       createdAt: now,
       updatedAt: now,
       isDeleted: false,
@@ -426,9 +452,18 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and has permission
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "patient", "update");
+
     const patient = await ctx.db.get(args.patientId);
     if (!patient || patient.isDeleted) {
       throw new Error("Patient not found");
+    }
+
+    // HIPAA: Verify patient belongs to user's practice
+    if (patient.practiceId !== auth.practiceId) {
+      throw new Error("Access denied: Patient belongs to another practice");
     }
 
     const { patientId, ...updates } = args;
@@ -452,9 +487,18 @@ export const discharge = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and has permission
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "patient", "update");
+
     const patient = await ctx.db.get(args.patientId);
     if (!patient || patient.isDeleted) {
       throw new Error("Patient not found");
+    }
+
+    // HIPAA: Verify patient belongs to user's practice
+    if (patient.practiceId !== auth.practiceId) {
+      throw new Error("Access denied: Patient belongs to another practice");
     }
 
     await ctx.db.patch(args.patientId, {
@@ -489,9 +533,18 @@ export const remove = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and has delete permission
+    const auth = await requirePracticeAuth(ctx);
+    requirePracticePermission(auth, "patient", "delete");
+
     const patient = await ctx.db.get(args.patientId);
     if (!patient) {
       throw new Error("Patient not found");
+    }
+
+    // HIPAA: Verify patient belongs to user's practice
+    if (patient.practiceId !== auth.practiceId) {
+      throw new Error("Access denied: Patient belongs to another practice");
     }
 
     await ctx.db.patch(args.patientId, {
@@ -505,6 +558,7 @@ export const remove = mutation({
 });
 
 // Get clinic-wide injury/diagnosis statistics for pie chart
+// HIPAA: Patient names removed from statistics to comply with minimum necessary standard
 export const getInjuryStats = query({
   args: {
     practiceId: v.id("clinicPractices"),
@@ -524,11 +578,15 @@ export const getInjuryStats = query({
         diagnosis: v.string(),
         count: v.number(),
         percentage: v.number(),
-        recentPatients: v.array(v.string()),
+        patientCount: v.number(), // HIPAA: Replaced patient names with anonymous count
       })
     ),
   }),
   handler: async (ctx, args) => {
+    // HIPAA: Verify user is authenticated and belongs to this practice
+    const auth = await verifyPracticeAccess(ctx, args.practiceId);
+    requirePracticePermission(auth, "patient", "read");
+
     // Get all cases for the practice
     const cases = await ctx.db
       .query("practiceCases")
@@ -562,22 +620,13 @@ export const getInjuryStats = query({
       }))
       .sort((a, b) => b.count - a.count);
 
-    // Top 6 injuries with patient names
-    const topInjuries = [];
-    for (const injury of injuryBreakdown.slice(0, 6)) {
-      const patientIds = diagnosisCounts[injury.diagnosis].patientIds.slice(0, 3);
-      const patientNames = [];
-      for (const patientId of patientIds) {
-        const patient = await ctx.db.get(patientId);
-        if (patient) {
-          patientNames.push(`${patient.firstName} ${patient.lastName.charAt(0)}.`);
-        }
-      }
-      topInjuries.push({
-        ...injury,
-        recentPatients: patientNames,
-      });
-    }
+    // Top 6 injuries - HIPAA: Return patient count instead of names
+    const topInjuries = injuryBreakdown.slice(0, 6).map((injury) => ({
+      diagnosis: injury.diagnosis,
+      count: injury.count,
+      percentage: injury.percentage,
+      patientCount: diagnosisCounts[injury.diagnosis].patientIds.length,
+    }));
 
     // Count unique patients
     const patients = await ctx.db
