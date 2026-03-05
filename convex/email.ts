@@ -15,8 +15,10 @@ export async function sendEmail({
   debugCode,
   debugLabel,
 }: SendEmailOptions) {
+  console.log("sendEmail called with to:", to, "subject:", subject);
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.AUTH_EMAIL;
+  console.log("apiKey exists:", !!apiKey, "fromEmail:", fromEmail);
   const label = debugLabel ?? "PASSWORD RESET";
   const linkMatch = html.match(/https?:\/\/[^\s"']+/);
   const link = linkMatch?.[0];
@@ -44,10 +46,12 @@ export async function sendEmail({
   const fromAddress = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
   const resend = new Resend(apiKey);
 
-  await resend.emails.send({
+  console.log("Attempting to send email via Resend...");
+  const result = await resend.emails.send({
     from: fromAddress,
     to,
     subject,
     html,
   });
+  console.log("Resend result:", JSON.stringify(result));
 }

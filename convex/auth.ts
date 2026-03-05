@@ -24,7 +24,7 @@ function isAllowedOrigin(origin: string): boolean {
   }
 
   // Convex site URL (for auth callbacks)
-  if (origin === "https://first-octopus-309.convex.site") {
+  if (origin === "https://jovial-wombat-207.convex.site") {
     return true;
   }
 
@@ -109,6 +109,10 @@ export function createAuth(ctx: GenericCtx<GenericDataModel>, request?: Request)
       requireEmailVerification: true, // HIPAA: Email verification required to prevent account impersonation
       minPasswordLength: 8,
       async sendVerificationEmail({ user, url }: { user: { email: string }; url: string }) {
+        console.log("sendVerificationEmail called for:", user.email);
+        console.log("Verification URL:", url);
+        console.log("RESEND_API_KEY set:", !!process.env.RESEND_API_KEY);
+        console.log("AUTH_EMAIL set:", !!process.env.AUTH_EMAIL);
         try {
           await sendEmail({
             to: user.email,
