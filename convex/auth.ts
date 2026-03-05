@@ -28,6 +28,11 @@ function isAllowedOrigin(origin: string): boolean {
     return true;
   }
 
+  // Production domain
+  if (origin === "https://app.noviaclinical.com") {
+    return true;
+  }
+
   // Localhost (any port) - development only
   if (process.env.NODE_ENV !== "production" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return true;
