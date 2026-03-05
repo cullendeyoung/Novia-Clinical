@@ -4,7 +4,6 @@ import {
   verifyPracticeAccess,
   requirePracticeAuth,
   requirePracticePermission,
-  verifyAppointmentInPractice,
   verifyPracticeUserInPractice,
 } from "./practiceAuthz";
 

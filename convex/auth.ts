@@ -108,7 +108,7 @@ export function createAuth(ctx: GenericCtx<GenericDataModel>, request?: Request)
       enabled: true,
       requireEmailVerification: true, // HIPAA: Email verification required to prevent account impersonation
       minPasswordLength: 8,
-      async sendVerificationEmail({ user, url }) {
+      async sendVerificationEmail({ user, url }: { user: { email: string }; url: string }) {
         void sendEmail({
           to: user.email,
           subject: "Verify your email",

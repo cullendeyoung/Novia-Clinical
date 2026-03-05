@@ -5,7 +5,6 @@ import {
   verifyPracticeAccess,
   requirePracticeAuth,
   requirePracticePermission,
-  verifyPatientInPractice,
 } from "./practiceAuthz";
 
 const patientStatusValidator = v.union(
