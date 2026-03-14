@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { RefreshCw, Mail } from "lucide-react";
-import { useAction } from "convex/react";
-import { api } from "../../../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,35 +24,6 @@ export default function AuthForm({
 }: AuthFormProps) {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
-  const [isResending, setIsResending] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
-
-  const resendVerificationEmail = useAction(api.authEmail.resendVerificationEmail);
-
-  const handleResendVerification = async () => {
-    if (!unverifiedEmail) return;
-
-    setIsResending(true);
-    try {
-      const result = await resendVerificationEmail({
-        email: unverifiedEmail,
-        callbackURL: window.location.origin + "/login",
-      });
-
-      if (result.success) {
-        setResendSuccess(true);
-        toast.success("Verification email sent! Check your inbox.");
-      } else {
-        toast.error(result.error || "Failed to send verification email. Please try again.");
-      }
-    } catch (error) {
-      console.error("Failed to resend verification email:", error);
-      toast.error("Failed to send verification email. Please try again.");
-    } finally {
-      setIsResending(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -103,14 +71,7 @@ export default function AuthForm({
         });
 
         if (error) {
-          const errorMessage = error?.message || "Authentication failed.";
-          // Check if the error is about email verification
-          if (errorMessage.toLowerCase().includes("verif") ||
-              errorMessage.toLowerCase().includes("not verified")) {
-            setUnverifiedEmail(email);
-            setResendSuccess(false);
-          }
-          toast.error(errorMessage);
+          toast.error(error?.message || "Authentication failed.");
           setIsLoading(false);
           return;
         }
@@ -120,7 +81,9 @@ export default function AuthForm({
     } catch (error) {
       console.error(error);
       toast.error(
-        `Authentication failed: ${error instanceof Error ? error.message : "Please try again."}`,
+        `Authentication failed: ${
+          error instanceof Error ? error.message : "Please try again."
+        }`,
       );
       setIsLoading(false);
     }
@@ -164,49 +127,6 @@ export default function AuthForm({
       </div>
 
       {beforeSubmit}
-
-      {/* Unverified email notice with resend option */}
-      {mode === "signIn" && unverifiedEmail && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <Mail className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-900">Email not verified</p>
-              <p className="text-sm text-amber-700 mt-1">
-                Please verify your email before signing in.
-              </p>
-              <div className="mt-3">
-                {resendSuccess ? (
-                  <p className="text-sm text-green-700">
-                    Verification email sent to {unverifiedEmail}
-                  </p>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleResendVerification}
-                    disabled={isResending}
-                    className="text-amber-700 border-amber-300 hover:bg-amber-100"
-                  >
-                    {isResending ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                        Resend verification email
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <Button
         type="submit"
